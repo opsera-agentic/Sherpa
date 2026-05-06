@@ -2,6 +2,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+function safeRealpath(p: string): string {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return p;
+  }
+}
 import { Command, CommanderError, Option } from 'commander';
 
 import { runAdapt } from './commands/adapt.js';
@@ -251,7 +259,7 @@ export async function runCli(argv: string[]): Promise<void> {
 
 const invoked =
   Boolean(process.argv[1]) &&
-  path.resolve(process.argv[1]!) === path.resolve(fileURLToPath(import.meta.url));
+  safeRealpath(process.argv[1]!) === safeRealpath(fileURLToPath(import.meta.url));
 
 if (invoked) {
   runCli(process.argv.slice(2)).catch(() => {
