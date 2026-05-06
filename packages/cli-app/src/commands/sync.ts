@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir, loadSherpaConfig } from '@sherpa/core-config';
-import { MemoryRepository } from '@sherpa/core-memory';
+import { MemoryRepository, scanForSecrets } from '@sherpa/core-memory';
 import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-adapters';
 import { loadSkills } from '@sherpa/core-skills';
 
@@ -32,6 +32,16 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
   const conventionsPath = path.join(sherpaDir, 'conventions.md');
   if (fs.existsSync(conventionsPath)) {
     const body = fs.readFileSync(conventionsPath, 'utf8');
+    if (config.privacy.redactSecrets) {
+      const scan = scanForSecrets(body);
+      if (scan.found) {
+        const rules = [...new Set(scan.matches.map((m) => m.ruleId))].join(', ');
+        logger.warn(
+          'sync.secrets',
+          `conventions.md contains ${scan.matches.length} potential secret(s) (rules: ${rules}). Review and remove before committing.`,
+        );
+      }
+    }
     memory.upsertEntry({
       workspace_id: 'default',
       title: 'conventions',
@@ -45,6 +55,16 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
 
   const decisions = readDecisions(path.join(sherpaDir, 'decisions'));
   decisions.forEach((content, idx) => {
+    if (config.privacy.redactSecrets) {
+      const scan = scanForSecrets(content);
+      if (scan.found) {
+        const rules = [...new Set(scan.matches.map((m) => m.ruleId))].join(', ');
+        logger.warn(
+          'sync.secrets',
+          `decision-${idx + 1} contains ${scan.matches.length} potential secret(s) (rules: ${rules}).`,
+        );
+      }
+    }
     memory.upsertEntry({
       workspace_id: 'default',
       title: `decision-${idx + 1}`,
@@ -55,6 +75,23 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
     });
     entriesUpdated += 1;
   });
+
+  // Index README.md as a reference entry for search discoverability
+  const readmePath = path.join(opts.projectRoot, 'README.md');
+  if (fs.existsSync(readmePath)) {
+    const readmeBody = fs.readFileSync(readmePath, 'utf8').trim();
+    if (readmeBody) {
+      memory.upsertEntry({
+        workspace_id: 'default',
+        title: 'README',
+        body: readmeBody,
+        type: 'reference',
+        tags: ['readme', 'overview'],
+        classification: 'public',
+      });
+      entriesUpdated += 1;
+    }
+  }
 
   const skills = loadSkills(sherpaDir).map((s) => ({
     name: s.name,

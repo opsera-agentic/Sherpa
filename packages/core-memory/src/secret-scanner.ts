@@ -27,6 +27,26 @@ const RULES: { id: string; regex: RegExp }[] = [
     id: 'api_key_assignment',
     regex: /\bapi_key\s*=\s*([^\s;'"`]{3,})/gi,
   },
+  {
+    id: 'json_secret',
+    regex: /["'](?:password|passwd|pwd|secret|token|api_key|apikey|auth_token|dbpsw)["']\s*[:=]\s*["']([^"']{3,})["']/gi,
+  },
+  {
+    id: 'mongodb_uri',
+    regex: /mongodb(?:\+srv)?:\/\/[^:]+:[^@]+@/gi,
+  },
+  {
+    id: 'github_pat',
+    regex: /\b(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})\b/g,
+  },
+  {
+    id: 'generic_bearer',
+    regex: /Bearer\s+[A-Za-z0-9\-._~+/]{20,}=*/gi,
+  },
+  {
+    id: 'high_entropy_hex',
+    regex: /["'][0-9a-fA-F]{32,}["']/g,
+  },
 ];
 
 function clipSnippet(text: string, start: number, end: number, radius = 24): string {

@@ -31,6 +31,35 @@ describe('scanForSecrets', () => {
     const result = scanForSecrets('Sherpa keeps institutional knowledge structured.');
     expect(result.found).toBe(false);
   });
+
+  it('detects JSON-style password fields', () => {
+    const result = scanForSecrets('{ "password": "hunter2" }');
+    expect(result.found).toBe(true);
+    expect(result.matches.some((m) => m.ruleId === 'json_secret')).toBe(true);
+  });
+
+  it('detects MongoDB URIs with credentials', () => {
+    const result = scanForSecrets('mongodb+srv://admin:s3cret@cluster0.example.net');
+    expect(result.found).toBe(true);
+    expect(result.matches.some((m) => m.ruleId === 'mongodb_uri')).toBe(true);
+  });
+
+  it('detects GitHub PATs', () => {
+    const result = scanForSecrets('ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh12');
+    expect(result.found).toBe(true);
+    expect(result.matches.some((m) => m.ruleId === 'github_pat')).toBe(true);
+  });
+
+  it('detects Bearer tokens', () => {
+    const result = scanForSecrets('Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature');
+    expect(result.found).toBe(true);
+    expect(result.matches.some((m) => m.ruleId === 'generic_bearer')).toBe(true);
+  });
+
+  it('does not false-positive on short strings', () => {
+    const result = scanForSecrets('See commit abc123 for details on the refactor.');
+    expect(result.found).toBe(false);
+  });
 });
 
 describe('MemoryRepository', () => {

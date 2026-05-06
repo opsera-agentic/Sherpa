@@ -16,6 +16,8 @@ export class WindsurfAdapter extends BaseAdapter {
         : context.skills.map((s) => `[skill:${s.name}] ${s.description}`).join('\n');
 
     const content = `${this.formatHeader(`Sherpa / ${context.projectName}`)}
+# Managed by Sherpa — edit .sherpa/conventions.md and run \`sherpa adapt\`.
+
 Project: ${context.projectDescription}
 
 [coding-conventions]

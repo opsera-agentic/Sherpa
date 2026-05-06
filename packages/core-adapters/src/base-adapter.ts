@@ -7,9 +7,12 @@ export abstract class BaseAdapter {
 
   abstract generate(context: AdapterContext): AdapterOutput;
 
+  /** Marker embedded in generated output so `sherpa pull` can detect and skip adapted files. */
+  static readonly GENERATED_MARKER = '<!-- sherpa:generated -->';
+
   protected formatHeader(title: string): string {
     const rule = '='.repeat(Math.min(72, Math.max(title.length + 8, 32)));
-    return `${rule}\n${title}\n${rule}\n`;
+    return `${BaseAdapter.GENERATED_MARKER}\n${rule}\n${title}\n${rule}\n`;
   }
 
   protected enforceSoftCap(content: string, warnings: string[]): void {

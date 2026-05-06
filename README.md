@@ -331,7 +331,8 @@ See [docs/contributing.md](docs/contributing.md) for the full guide.
 
 ## Roadmap
 
-- [ ] File watching with auto-regeneration (`sherpa watch`)
+- [x] File watching with auto-regeneration (`sherpa watch`)
+- [ ] Parser integration for source file indexing (JS/TS regex chunker built in `infra-parser`, CLI integration pending)
 - [ ] Custom adapter development SDK
 - [ ] Skill marketplace for sharing community skills
 - [ ] VS Code extension for inline skill discovery
