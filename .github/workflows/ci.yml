@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: Guard — no tracked node_modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if node_modules is committed
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -q '^node_modules/'; then
+            echo '::error::Tracked files under node_modules/ were found. Remove them from git history.'
+            git ls-files | grep '^node_modules/' || true
+            exit 1
+          fi
+          echo 'OK: no tracked node_modules/ paths'
+
+  build:
+    name: Build
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  lint:
+    name: Lint
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: Test
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test
+
+  semgrep:
+    name: Security scan — Semgrep
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep ci --config auto
+
+  gitleaks:
+    name: Security scan — Gitleaks
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish tarball (npm pack)
+    needs: [build, lint, test, semgrep, gitleaks]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: mkdir -p artifacts && npm pack -w @sherpa/cli-app --pack-destination artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sherpa-cli-tgz
+          path: artifacts/*.tgz
