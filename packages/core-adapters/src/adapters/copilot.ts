@@ -1,5 +1,12 @@
 import { BaseAdapter } from '../base-adapter.js';
-import type { AdapterContext, AdapterMetadata, AdapterOutput } from '../types.js';
+import {
+  isSkillsEmptyPlaceholder,
+  normalizeConventionsBody,
+  parseDecisionList,
+  splitH2Sections,
+} from '../parse-helpers.js';
+import { emptySectionDoc, type SectionDoc } from '../section-doc.js';
+import type { AdapterContext, AdapterMetadata, AdapterOutput, SkillSummary } from '../types.js';
 
 export class CopilotAdapter extends BaseAdapter {
   readonly metadata: AdapterMetadata = {
@@ -33,8 +40,43 @@ ${this.renderSkills(context)}
     return { content, filePath: this.metadata.outputFile, warnings };
   }
 
+  parse(content: string): SectionDoc {
+    const doc = emptySectionDoc();
+    const sections = splitH2Sections(content);
+
+    doc.projectDescription = (sections.get('Project Overview') ?? '').trim();
+
+    const conventions = sections.get('Coding Conventions');
+    if (conventions !== undefined) {
+      doc.conventions = normalizeConventionsBody(conventions);
+    }
+
+    const decisionsBody = sections.get('Architecture Decisions');
+    if (decisionsBody !== undefined) {
+      doc.decisions = parseDecisionList(decisionsBody);
+    }
+
+    const skillsBody = sections.get('Available Skills');
+    if (skillsBody !== undefined) {
+      doc.skills = parseCopilotSkills(skillsBody);
+    }
+
+    return doc;
+  }
+
   private renderSkills(context: AdapterContext): string {
     if (!context.skills.length) return '_No skills yet._';
     return context.skills.map((s) => `- \`${s.name}\`: ${s.description}`).join('\n');
   }
+}
+
+function parseCopilotSkills(body: string): SkillSummary[] {
+  if (isSkillsEmptyPlaceholder(body)) return [];
+  const skills: SkillSummary[] = [];
+  for (const line of body.split(/\r?\n/)) {
+    const match = line.match(/^- `([^`]+)`: (.*)$/);
+    if (!match) continue;
+    skills.push({ name: match[1] ?? '', tags: [], description: match[2] ?? '' });
+  }
+  return skills;
 }

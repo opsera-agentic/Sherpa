@@ -13,6 +13,12 @@ export type {
   SkillSummary,
   ValidationResult,
 } from './types.js';
+export {
+  contextFromSectionDoc,
+  emptySectionDoc,
+  sectionDocFromContext,
+  type SectionDoc,
+} from './section-doc.js';
 export { BaseAdapter } from './base-adapter.js';
 export { AdapterRegistry } from './registry.js';
 export { ClaudeCodeAdapter } from './adapters/claude-code.js';

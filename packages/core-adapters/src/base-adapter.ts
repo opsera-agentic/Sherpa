@@ -1,4 +1,5 @@
 import type { AdapterContext, AdapterMetadata, AdapterOutput, ValidationResult } from './types.js';
+import type { SectionDoc } from './section-doc.js';
 
 const SOFT_CAP_BYTES = 64 * 1024;
 
@@ -6,6 +7,14 @@ export abstract class BaseAdapter {
   abstract readonly metadata: AdapterMetadata;
 
   abstract generate(context: AdapterContext): AdapterOutput;
+
+  /**
+   * Inverse of `generate`: recover a structured {@link SectionDoc} from a
+   * previously generated adapter file. Implementations must satisfy the
+   * round-trip property exercised in `roundtrip.test.ts` — re-rendering the
+   * parsed result is byte-identical to the input.
+   */
+  abstract parse(content: string): SectionDoc;
 
   protected formatHeader(title: string): string {
     const rule = '='.repeat(Math.min(72, Math.max(title.length + 8, 32)));
