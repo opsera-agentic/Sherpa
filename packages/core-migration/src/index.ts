@@ -4,6 +4,9 @@ import { createDefaultAdapterRegistry } from '@sherpa/core-adapters';
 import { MemoryRepository, sha256Hex } from '@sherpa/core-memory';
 import { parseAgentConfig, resolveAgentSourcePath } from './parsers.js';
 
+export { parseAgentConfig } from './parsers.js';
+export type { ParsedMemoryDraft } from './parsers.js';
+
 export type AgentSource = 'claude-code' | 'cursor' | 'codex-cli' | 'gemini-cli' | 'copilot' | 'windsurf';
 
 export interface MigrateOptions {
