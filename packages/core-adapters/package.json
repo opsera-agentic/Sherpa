@@ -1,0 +1,20 @@
+{
+  "name": "@sherpa/core-adapters",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@sherpa/core-config": "0.1.0",
+    "@sherpa/core-skills": "0.1.0"
+  }
+}

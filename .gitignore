@@ -1,0 +1,12 @@
+.forge-commit-ready
+.cursor/hooks.json
+.cursor/hooks/
+.cursor/rules/forge-workflow.mdc
+
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.sherpa/memory.db
+.env
+.env.*

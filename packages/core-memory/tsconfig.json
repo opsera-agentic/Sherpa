@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts"],
+  "exclude": ["dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../infra-sqlite" },
+    { "path": "../core-audit" }
+  ]
+}

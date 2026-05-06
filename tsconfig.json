@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "composite": true,
+    "incremental": true
+  },
+  "references": [
+    { "path": "packages/core-config" },
+    { "path": "packages/core-audit" },
+    { "path": "packages/core-memory" },
+    { "path": "packages/core-search" },
+    { "path": "packages/core-skills" },
+    { "path": "packages/core-adapters" },
+    { "path": "packages/core-migration" },
+    { "path": "packages/infra-sqlite" },
+    { "path": "packages/infra-parser" },
+    { "path": "packages/infra-embedding" },
+    { "path": "packages/mcp-server" },
+    { "path": "packages/cli-app" }
+  ]
+}

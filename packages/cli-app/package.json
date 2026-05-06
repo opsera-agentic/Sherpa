@@ -1,0 +1,30 @@
+{
+  "name": "@sherpa/cli-app",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "sherpa": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@sherpa/core-adapters": "0.1.0",
+    "@sherpa/core-audit": "0.1.0",
+    "@sherpa/core-config": "0.1.0",
+    "@sherpa/core-memory": "0.1.0",
+    "@sherpa/core-migration": "0.1.0",
+    "@sherpa/core-search": "0.1.0",
+    "@sherpa/core-skills": "0.1.0",
+    "@sherpa/mcp-server": "0.1.0",
+    "commander": "^12.1.0"
+  }
+}

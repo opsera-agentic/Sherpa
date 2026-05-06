@@ -1,0 +1,31 @@
+{
+  "name": "sherpa-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sherpa - Portable context management for AI coding agents",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @sherpa/infra-sqlite && npm run build -w @sherpa/infra-parser && npm run build -w @sherpa/infra-embedding && npm run build -w @sherpa/core-config && npm run build -w @sherpa/core-audit && npm run build -w @sherpa/core-memory && npm run build -w @sherpa/core-skills && npm run build -w @sherpa/core-search && npm run build -w @sherpa/core-adapters && npm run build -w @sherpa/core-migration && npm run build -w @sherpa/mcp-server && npm run build -w @sherpa/cli-app",
+    "lint": "eslint 'packages/*/src/**/*.ts'",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "clean": "rm -rf packages/*/dist && find packages -name '*.tsbuildinfo' -delete"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
