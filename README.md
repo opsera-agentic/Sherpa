@@ -93,6 +93,14 @@ sherpa init --template cli-tool     # Arg parsing, error handling
 sherpa init --template monorepo     # Workspace management
 ```
 
+**Auto-detection:** When no `--template` flag is provided, Sherpa inspects your project to choose the best template automatically:
+- `package.json` with `workspaces` → `monorepo`
+- `package.json` with `bin` → `cli-tool`
+- `package.json` with React/Express/Vue/etc. → `web-app`
+- `build.gradle` / `pom.xml` → `web-app`
+- `pyproject.toml` with Flask/Django/FastAPI → `web-app`
+- Default fallback → `library`
+
 ### 2. Customize your conventions
 
 Edit `.sherpa/conventions.md` with your project's coding standards, naming patterns, and architectural guidelines. This is the single source of truth that all adapters draw from.
@@ -129,11 +137,15 @@ sherpa search --mode hybrid "error handling patterns"
 sherpa sync
 ```
 
-Rebuilds the memory index and regenerates adapter files from the latest `.sherpa/` content.
+Rebuilds the memory index and regenerates adapter files from the latest `.sherpa/` content. Sync also indexes:
+- `README.md` — project overview
+- Project config files (`package.json`, `tsconfig.json`, `Dockerfile`, `pyproject.toml`, `build.gradle`)
+- GitHub Actions workflows (`.github/workflows/*.yml`)
+- Optionally, JS/TS source files (enable with `sync.indexSourceFiles: true` in config)
 
 ### 6. Keep agent files in sync (reverse flow)
 
-If a teammate edits `CLAUDE.md` or `.cursorrules` directly, pull those changes back into `conventions.md`:
+If a teammate **manually creates** a `CLAUDE.md` or `.cursorrules`, pull those changes back into `conventions.md`:
 
 ```bash
 # Pull all agent files
@@ -169,13 +181,13 @@ Watching 3 agent file(s) for changes. Press Ctrl+C to stop.
 | `sherpa pull [--from <agent>]` | Reverse-sync agent files back into `conventions.md` |
 | `sherpa watch` | Watch agent files and auto-run pull + adapt on every save |
 | `sherpa sync` | Sync sources into memory and refresh adapter snapshots |
-| `sherpa search <query>` | Search memory with BM25/hybrid search |
+| `sherpa search <query>` | Search memory with BM25/hybrid search; surfaces relevant skills via trigger matching |
 | `sherpa skills list` | List available skills |
 | `sherpa skills show <name>` | View a skill's full details |
 | `sherpa skills import <path>` | Import a skill from external source |
 | `sherpa serve` | Start the MCP server (stdio transport) |
 | `sherpa migrate --from <agent>` | Import context from existing agent configs into memory |
-| `sherpa validate` | Check conventions for consistency |
+| `sherpa validate` | Check conventions for consistency (duplicates, secrets, skill validity, size) |
 | `sherpa status` | Show database stats and health |
 | `sherpa archive` | Archive old memory entries |
 
@@ -233,6 +245,12 @@ embedding:
   provider: tfidf    # Local, no API needed (default)
   # provider: ollama # Local GPU acceleration
   # provider: openai # Cloud, highest quality
+
+sync:
+  indexSourceFiles: false  # Set to true to index JS/TS source files from src/ and lib/
+
+adapters:
+  disabled: []  # Agent names to skip, e.g. ['windsurf', 'codex-cli']
 ```
 
 ## MCP Integration
@@ -254,10 +272,11 @@ Configure in your agent's MCP settings to enable live memory access during codin
 
 Sherpa takes security seriously:
 
-- **Secret scanning** — Content is scanned for AWS keys, private key headers, password patterns before storage
+- **Secret scanning** — Content is scanned for 9 pattern types during sync: AWS keys, private key blocks, password/api_key assignments, JSON-style secrets (`"password": "X"`), MongoDB URIs with credentials, GitHub PATs, Bearer tokens, and high-entropy hex strings. Controlled via `privacy.redactSecrets` config toggle.
 - **Data classification** — Four tiers (Public, Internal, Confidential, Restricted) control what reaches adapter files
 - **PII redaction** — Git-derived metadata (emails, names) is optionally redacted
-- **Audit trail** — Hash-chained logs of every mutation for tamper detection
+- **Audit trail** — Hash-chained logs of every mutation for tamper detection. Enable `audit.integrityChecksOnStartup` to verify the hash chain on every sync.
+- **Round-trip protection** — Adapted files include a `<!-- sherpa:generated -->` marker. `sherpa pull` automatically skips Sherpa-generated files to prevent content duplication.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and detailed security guidance.
 
@@ -278,7 +297,7 @@ We welcome contributions of all kinds — bug reports, documentation improvement
 
 ```bash
 # Clone the repo
-git clone https://github.com/Vishnu-Opsera/Sherpa.git
+git clone https://github.com/opsera-agentic/Sherpa.git
 cd Sherpa
 
 # Install dependencies
@@ -332,9 +351,18 @@ See [docs/contributing.md](docs/contributing.md) for the full guide.
 ## Roadmap
 
 - [x] File watching with auto-regeneration (`sherpa watch`)
-- [ ] Parser integration for source file indexing (JS/TS regex chunker built in `infra-parser`, CLI integration pending)
+- [x] Project type auto-detection during `sherpa init`
+- [x] Round-trip corruption protection (`<!-- sherpa:generated -->` marker)
+- [x] Secret scanning with 9 pattern rules (JSON, MongoDB, GitHub PAT, Bearer, etc.)
+- [x] JS/TS source file indexing via `infra-parser` (opt-in: `sync.indexSourceFiles`)
+- [x] Project config file indexing (package.json, Dockerfile, workflows, etc.)
+- [x] Skill trigger matching in `sherpa search`
+- [x] Adapter disabling via `adapters.disabled` config
+- [x] Audit hash-chain verification via `audit.integrityChecksOnStartup`
+- [x] Agent-specific adapter preambles (differentiated output per tool)
 - [ ] Custom adapter development SDK
 - [ ] Skill marketplace for sharing community skills
+- [ ] Skill script execution (sandboxed)
 - [ ] VS Code extension for inline skill discovery
 - [ ] Cloud sync for distributed teams (opt-in)
 - [ ] Additional language support for AST chunking (Python, Go, Rust)
