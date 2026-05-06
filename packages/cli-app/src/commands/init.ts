@@ -9,6 +9,7 @@ import {
   mergeWithDefaults,
 } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
+import { parseAgentConfig, type ParsedMemoryDraft } from '@sherpa/core-migration';
 
 import { getStarterTemplate, skillToMarkdown, type StarterTemplateId } from '../templates/index.js';
 
@@ -72,15 +73,50 @@ export async function runInit(opts: InitCommandOptions): Promise<void> {
 
   fs.writeFileSync(getSherpaConfigPath(opts.projectRoot), serializeSherpaConfig(mergedConfig), 'utf8');
 
-  const detected = AGENT_FILES.filter(({ file }) => fs.existsSync(path.join(opts.projectRoot, file))).map(
-    (x) => x.agent,
-  );
+  const detected = AGENT_FILES.filter(({ file }) => fs.existsSync(path.join(opts.projectRoot, file)));
+
+  if (detected.length > 0) {
+    const conventionsPath = path.join(sherpaDir, 'conventions.md');
+    let appended = 0;
+
+    for (const { agent, file } of detected) {
+      const filePath = path.join(opts.projectRoot, file);
+      try {
+        const raw = fs.readFileSync(filePath, 'utf8').trim();
+        if (!raw) continue;
+
+        const drafts = parseAgentConfig(agent, raw);
+        if (!drafts.length) continue;
+
+        const block = [
+          `\n\n## Imported from ${file}\n`,
+          ...drafts.map((d: ParsedMemoryDraft) => `### ${d.title}\n\n${d.content}`),
+        ].join('\n\n');
+
+        fs.appendFileSync(conventionsPath, block + '\n', 'utf8');
+        appended += 1;
+        logger.info('init.import', `Imported existing ${file} into conventions.md`);
+      } catch {
+        logger.warn('init.import', `Could not read ${filePath}, skipping`);
+      }
+    }
+
+    if (appended > 0 && !opts.json) {
+      process.stdout.write(
+        `Imported ${appended} existing agent file(s) into .sherpa/conventions.md — review and edit as needed.\n`,
+      );
+    }
+  }
 
   logger.warn(
     'security',
     'Do not store API keys or long-lived secrets in Sherpa-managed markdown files — rotate credentials stored accidentally.',
   );
-  logger.info('agents.detected', `Detected agent traces: ${detected.join(', ') || 'none'}`, { detected });
+  logger.info(
+    'agents.detected',
+    `Detected agent traces: ${detected.map((x) => x.agent).join(', ') || 'none'}`,
+    { detected: detected.map((x) => x.agent) },
+  );
 
   if (!opts.json) {
     process.stdout.write(`Sherpa initialized at ${sherpaDir}\n`);

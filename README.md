@@ -78,6 +78,12 @@ This creates a `.sherpa/` directory with:
 - `memory.sqlite` — Local search-indexed memory store
 - `audit/` — Immutable audit trail
 
+**If your project already has agent files** (`CLAUDE.md`, `.cursorrules`, etc.), `sherpa init` automatically detects and imports their content into `conventions.md` so nothing is lost:
+
+```
+Imported 2 existing agent file(s) into .sherpa/conventions.md — review and edit as needed.
+```
+
 Use a starter template for pre-configured conventions:
 
 ```bash
@@ -89,7 +95,7 @@ sherpa init --template monorepo     # Workspace management
 
 ### 2. Customize your conventions
 
-Edit `.sherpa/conventions.md` with your project's coding standards, naming patterns, and architectural guidelines. This is the source of truth that all adapters draw from.
+Edit `.sherpa/conventions.md` with your project's coding standards, naming patterns, and architectural guidelines. This is the single source of truth that all adapters draw from.
 
 ### 3. Generate adapter files
 
@@ -125,19 +131,50 @@ sherpa sync
 
 Rebuilds the memory index and regenerates adapter files from the latest `.sherpa/` content.
 
+### 6. Keep agent files in sync (reverse flow)
+
+If a teammate edits `CLAUDE.md` or `.cursorrules` directly, pull those changes back into `conventions.md`:
+
+```bash
+# Pull all agent files
+sherpa pull
+
+# Pull a specific one
+sherpa pull --from claude-code
+```
+
+Or run the file watcher to sync automatically whenever an agent file is saved:
+
+```bash
+sherpa watch
+```
+
+```
+Watching 3 agent file(s) for changes. Press Ctrl+C to stop.
+  CLAUDE.md
+  .cursorrules
+  AGENTS.md
+
+[watch] CLAUDE.md changed — pulling into conventions.md...
+[watch] Re-running adapt...
+[watch] Done. conventions.md and all adapter files are up to date.
+```
+
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `sherpa init` | Initialize the `.sherpa/` workspace |
-| `sherpa sync` | Sync sources into memory and refresh adapters |
+| `sherpa init` | Initialize the `.sherpa/` workspace; auto-imports any existing agent files |
+| `sherpa adapt` | Generate agent-specific instruction files from `conventions.md` |
+| `sherpa pull [--from <agent>]` | Reverse-sync agent files back into `conventions.md` |
+| `sherpa watch` | Watch agent files and auto-run pull + adapt on every save |
+| `sherpa sync` | Sync sources into memory and refresh adapter snapshots |
 | `sherpa search <query>` | Search memory with BM25/hybrid search |
-| `sherpa adapt` | Generate agent-specific instruction files |
 | `sherpa skills list` | List available skills |
 | `sherpa skills show <name>` | View a skill's full details |
 | `sherpa skills import <path>` | Import a skill from external source |
 | `sherpa serve` | Start the MCP server (stdio transport) |
-| `sherpa migrate --from <agent>` | Import context from existing agent configs |
+| `sherpa migrate --from <agent>` | Import context from existing agent configs into memory |
 | `sherpa validate` | Check conventions for consistency |
 | `sherpa status` | Show database stats and health |
 | `sherpa archive` | Archive old memory entries |

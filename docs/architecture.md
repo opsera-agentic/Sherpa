@@ -6,7 +6,7 @@ Sherpa separates **orchestration** (CLI), **policy-rich domains** (`core-*`), an
 
 | Package | Responsibility |
 |---------|----------------|
-| `@sherpa/cli-app` | Parses argv, loads config, dispatches commands (`init`, `sync`, `adapt`, `search`, …). |
+| `@sherpa/cli-app` | Parses argv, loads config, dispatches commands (`init`, `sync`, `adapt`, `pull`, `watch`, `search`, …). |
 | `@sherpa/core-config` | YAML schema, defaults, merge + validation helpers. |
 | `@sherpa/core-memory` | Memory entries, chunk rebuild hooks, secret scanning gates. |
 | `@sherpa/core-skills` | SKILL.md discovery + parsing into structured skills. |
@@ -22,15 +22,24 @@ Sherpa separates **orchestration** (CLI), **policy-rich domains** (`core-*`), an
 ## Data flow (conceptual)
 
 ```
-Markdown & YAML (.sherpa/, repo docs)
+Agent files (CLAUDE.md, .cursorrules, …)
         │
+        │  sherpa pull / sherpa watch (reverse sync)
         ▼
-  CLI commands (sync / migrate / skills import)
+.sherpa/conventions.md  ◄──── edit here (source of truth)
         │
-        ├──► SQLite • MEMORY_ENTRIES / MEMORY_CHUNKS (+ embeddings)
+        │  sherpa init (one-time import on first run)
+        │  sherpa adapt (forward generate)
+        │  sherpa sync  (memory + adapter snapshots)
+        ▼
+  SQLite • MEMORY_ENTRIES / MEMORY_CHUNKS (+ embeddings)
         │
         └──► Adapter snapshots / exported instructions (CLAUDE.md, …)
 ```
+
+**Forward flow** (`conventions.md` → agent files): `sherpa adapt` overwrites agent files from `conventions.md`.
+
+**Reverse flow** (agent files → `conventions.md`): `sherpa pull` or `sherpa watch` absorbs direct edits back into `conventions.md`, keyed by per-file HTML markers so each import block updates in-place.
 
 Search reads chunks (+ embeddings) through `core-search`, never bypassing validation layers exposed by `MemoryService`.
 

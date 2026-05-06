@@ -16,12 +16,14 @@ import { runAdapt } from './commands/adapt.js';
 import { runArchive } from './commands/archive.js';
 import { runInit } from './commands/init.js';
 import { runMigrate } from './commands/migrate.js';
+import { runPull } from './commands/pull.js';
 import { runSearch } from './commands/search.js';
 import { runServe } from './commands/serve.js';
 import { runSkills } from './commands/skills.js';
 import { runStatus } from './commands/status.js';
 import { runSync } from './commands/sync.js';
 import { runValidate } from './commands/validate.js';
+import { runWatch } from './commands/watch.js';
 import { createLogger } from './logger.js';
 
 const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../package.json');
@@ -229,6 +231,41 @@ export function createSherpaProgram(): Command {
     .action(async (_opts, cmd) => {
       const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
       await runStatus({
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  program
+    .command('pull')
+    .description('Reverse-sync agent files back into conventions.md')
+    .addOption(
+      new Option('--from <agent>', 'Pull from a specific agent only').choices([
+        'claude-code',
+        'cursor',
+        'codex-cli',
+        'gemini-cli',
+        'copilot',
+        'windsurf',
+      ]),
+    )
+    .action(async (opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runPull({
+        from: opts.from,
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  program
+    .command('watch')
+    .description('Watch agent files and auto-sync changes into conventions.md')
+    .action(async (_opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runWatch({
         projectRoot: resolveRoot(g),
         verbose: Boolean(g.verbose),
         json: Boolean(g.json),

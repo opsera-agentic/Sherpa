@@ -1,0 +1,99 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import type { LoggerOptions } from '../logger.js';
+import { createLogger } from '../logger.js';
+import { getSherpaDir } from '@sherpa/core-config';
+import { parseAgentConfig, type ParsedMemoryDraft } from '@sherpa/core-migration';
+
+export type AgentSourceId = 'claude-code' | 'cursor' | 'codex-cli' | 'gemini-cli' | 'copilot' | 'windsurf';
+
+const AGENT_FILES: Record<AgentSourceId, string> = {
+  'claude-code': 'CLAUDE.md',
+  cursor: '.cursorrules',
+  'codex-cli': 'AGENTS.md',
+  'gemini-cli': 'GEMINI.md',
+  copilot: path.join('.github', 'copilot-instructions.md'),
+  windsurf: '.windsurfrules',
+};
+
+export interface PullCommandOptions extends LoggerOptions {
+  projectRoot: string;
+  from?: AgentSourceId;
+}
+
+const IMPORT_START = (file: string) => `<!-- sherpa:import:${file}:start -->`;
+const IMPORT_END = (file: string) => `<!-- sherpa:import:${file}:end -->`;
+
+function buildImportBlock(file: string, drafts: ParsedMemoryDraft[]): string {
+  const inner = drafts.map((d) => `### ${d.title}\n\n${d.content}`).join('\n\n');
+  return `${IMPORT_START(file)}\n## Imported from ${file}\n\n${inner}\n${IMPORT_END(file)}`;
+}
+
+function upsertImportBlock(conventions: string, file: string, drafts: ParsedMemoryDraft[]): string {
+  const block = buildImportBlock(file, drafts);
+  const start = IMPORT_START(file);
+  const end = IMPORT_END(file);
+  const startIdx = conventions.indexOf(start);
+  const endIdx = conventions.indexOf(end);
+
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    return conventions.slice(0, startIdx) + block + conventions.slice(endIdx + end.length);
+  }
+
+  return conventions.trimEnd() + '\n\n' + block + '\n';
+}
+
+async function pullOne(
+  projectRoot: string,
+  agentId: AgentSourceId,
+  conventionsPath: string,
+  logger: ReturnType<typeof createLogger>,
+): Promise<boolean> {
+  const file = AGENT_FILES[agentId];
+  const filePath = path.join(projectRoot, file);
+
+  if (!fs.existsSync(filePath)) {
+    logger.warn('pull.missing', `${file} not found, skipping`);
+    return false;
+  }
+
+  const raw = fs.readFileSync(filePath, 'utf8').trim();
+  if (!raw) {
+    logger.warn('pull.empty', `${file} is empty, skipping`);
+    return false;
+  }
+
+  const drafts = parseAgentConfig(agentId, raw);
+  if (!drafts.length) {
+    logger.warn('pull.empty', `No sections detected in ${file}, skipping`);
+    return false;
+  }
+
+  const existing = fs.existsSync(conventionsPath) ? fs.readFileSync(conventionsPath, 'utf8') : '';
+  const updated = upsertImportBlock(existing, file, drafts);
+  fs.writeFileSync(conventionsPath, updated, 'utf8');
+  logger.info('pull.updated', `Synced ${drafts.length} section(s) from ${file} into conventions.md`);
+  return true;
+}
+
+export async function runPull(opts: PullCommandOptions): Promise<void> {
+  const logger = createLogger('pull', opts);
+  const sherpaDir = getSherpaDir(opts.projectRoot);
+  const conventionsPath = path.join(sherpaDir, 'conventions.md');
+
+  const targets: AgentSourceId[] = opts.from
+    ? [opts.from]
+    : (Object.keys(AGENT_FILES) as AgentSourceId[]);
+
+  let updated = 0;
+  for (const agentId of targets) {
+    const ok = await pullOne(opts.projectRoot, agentId, conventionsPath, logger);
+    if (ok) updated += 1;
+  }
+
+  if (opts.json) {
+    process.stdout.write(`${JSON.stringify({ updated, agents: targets })}\n`);
+  } else {
+    process.stdout.write(`Pull complete — ${updated} agent file(s) synced into conventions.md\n`);
+  }
+}

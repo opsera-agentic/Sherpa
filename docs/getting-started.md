@@ -1,6 +1,6 @@
 # Getting started (5 minutes)
 
-Sherpa gives AI coding agents a **portable project brain**: conventions, skills, and searchable memory live under `.sherpa/`, then sync into each tool’s native instruction files.
+Sherpa gives AI coding agents a **portable project brain**: conventions, skills, and searchable memory live under `.sherpa/`, then sync into each tool's native instruction files.
 
 ## 1. Install the CLI
 
@@ -25,6 +25,14 @@ sherpa init --template web-app   # or library | cli-tool | monorepo
 
 You should see `.sherpa/` with `sherpa.config.yaml`, `conventions.md`, `skills/`, and a SQLite database path declared in config.
 
+**Already have agent files?** If your project has existing `CLAUDE.md`, `.cursorrules`, or other agent instruction files, `sherpa init` detects them and automatically imports their content into `conventions.md` — no manual migration needed:
+
+```
+Imported 2 existing agent file(s) into .sherpa/conventions.md — review and edit as needed.
+```
+
+Review `.sherpa/conventions.md` after init to verify the imported content looks right, then edit freely.
+
 ## 3. Sync sources into memory
 
 ```bash
@@ -39,9 +47,45 @@ This replays Sherpa-managed sources into memory and refreshes derived snapshots 
 sherpa adapt
 ```
 
-Sherpa writes agent-specific files (for example `CLAUDE.md`, `.cursorrules`, `AGENTS.md`) based on your workspace contents.
+Sherpa writes agent-specific files (for example `CLAUDE.md`, `.cursorrules`, `AGENTS.md`) based on your `conventions.md`. This **overwrites** the output files, so always treat `conventions.md` as the source of truth and avoid editing agent files directly.
 
-## 5. Search and iterate
+## 5. Reverse-sync agent files back into conventions.md
+
+If a teammate edits an agent file directly (instead of going through `conventions.md`), pull those changes back:
+
+```bash
+# Pull all agent files at once
+sherpa pull
+
+# Pull a specific agent file
+sherpa pull --from claude-code
+sherpa pull --from cursor
+```
+
+Each agent's content is written into a clearly marked, per-file block in `conventions.md`. Running `pull` again updates only that block — no duplicates.
+
+## 6. Watch for changes automatically
+
+Instead of running `pull` manually, start the file watcher to sync automatically whenever an agent file is saved:
+
+```bash
+sherpa watch
+```
+
+```
+Watching 3 agent file(s) for changes. Press Ctrl+C to stop.
+  CLAUDE.md
+  .cursorrules
+  AGENTS.md
+
+[watch] CLAUDE.md changed — pulling into conventions.md...
+[watch] Re-running adapt...
+[watch] Done. conventions.md and all adapter files are up to date.
+```
+
+Run this in a background terminal during active development sessions.
+
+## 7. Search and iterate
 
 ```bash
 sherpa search "Where do we document deployment?"

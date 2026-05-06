@@ -6,6 +6,7 @@ import { getSherpaDir } from '@sherpa/core-config';
 import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-adapters';
 import { loadSkills } from '@sherpa/core-skills';
 
+
 export interface AdaptCommandOptions extends LoggerOptions {
   projectRoot: string;
   agent?: string;
