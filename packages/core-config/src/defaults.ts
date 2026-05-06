@@ -9,6 +9,10 @@ export function getDefaultConfig(): SherpaConfig {
       ide: { enabled: true },
       terminal: { enabled: true },
       http: { enabled: true },
+      disabled: [],
+    },
+    sync: {
+      indexSourceFiles: false,
     },
     memory: {
       databasePath: '.sherpa/memory.sqlite',

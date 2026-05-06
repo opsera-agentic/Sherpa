@@ -18,6 +18,16 @@ export function parseMarkdownAgentDoc(markdown: string): ParsedMemoryDraft[] {
   }));
 }
 
+/** Extracts first meaningful line from text as a title, falling back to a default. */
+function extractTitle(text: string, fallback: string): string {
+  const firstLine = text
+    .split('\n')
+    .map((l) => l.replace(/^[#\-*>\s]+/, '').trim())
+    .find((l) => l.length > 0);
+  if (!firstLine) return fallback;
+  return firstLine.length > 80 ? `${firstLine.slice(0, 77)}...` : firstLine;
+}
+
 /** Cursor `.cursorrules` files mix prose blocks — split on double newlines. */
 export function parseCursorRules(contents: string): ParsedMemoryDraft[] {
   const chunks = contents
@@ -25,7 +35,7 @@ export function parseCursorRules(contents: string): ParsedMemoryDraft[] {
     .map((chunk) => chunk.trim())
     .filter(Boolean);
   return chunks.map((chunk, idx) => ({
-    title: `Cursor rules block ${idx + 1}`,
+    title: extractTitle(chunk, `Cursor rules block ${idx + 1}`),
     content: chunk,
     type: 'cursor-rules',
   }));
@@ -45,7 +55,7 @@ export function parseWindsurfRules(contents: string): ParsedMemoryDraft[] {
   }
   return drafts.length
     ? drafts
-    : [{ title: 'windsurf-document', content: contents.trim(), type: 'windsurf-document' }];
+    : [{ title: extractTitle(contents, 'windsurf-document'), content: contents.trim(), type: 'windsurf-document' }];
 }
 
 /** Chooses parser based on originating agent id. */

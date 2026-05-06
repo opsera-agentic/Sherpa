@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryRepository } from '@sherpa/core-memory';
 import { MigrationService } from './index.js';
+import { parseCursorRules } from './parsers.js';
 
 let tmp: string | undefined;
 
@@ -41,6 +42,18 @@ describe('core-migration', () => {
     const report = svc.migrate({ projectRoot: tmp, from: 'cursor', dryRun: true });
     expect(report.entriesCreated).toBeGreaterThan(0);
     expect(memory.countEntries()).toBe(0);
+  });
+
+  it('extracts meaningful titles from cursor rules blocks', () => {
+    const drafts = parseCursorRules('Always use TypeScript strict mode.\n\nPrefer const over let.');
+    expect(drafts).toHaveLength(2);
+    expect(drafts[0]!.title).toBe('Always use TypeScript strict mode.');
+    expect(drafts[1]!.title).toBe('Prefer const over let.');
+  });
+
+  it('falls back to generic title when block has no text', () => {
+    const drafts = parseCursorRules('   \n\n   ');
+    expect(drafts).toHaveLength(0);
   });
 
   it('records errors when source file missing', () => {

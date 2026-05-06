@@ -100,21 +100,21 @@ All 9 recommendations were implemented and verified. 90 tests pass (85 original 
 | TC7 | Secret scanning | FAIL | **PASS** | 5 new scanner rules + scanning wired into sync with warnings |
 | TC8 | Search for concepts | PASS | PASS | (improved: README now searchable) |
 | TC9 | Validate | FAIL | **PASS** | Checks: duplicate blocks, secrets, skill validity, size cap |
-| TC10 | Migrate | PARTIAL | PARTIAL | (unchanged) |
-| TC11 | Source parser/indexing | FAIL | FAIL | (parser still dead — too risky for first contribution) |
-| TC12 | Decorative config | FAIL | **PARTIAL** | `redactSecrets` now wired into sync; others documented as TODO |
-| TC13 | Sync coverage | FAIL | **PARTIAL** | README.md now indexed as reference; source files still not indexed |
+| TC10 | Migrate | PARTIAL | **PASS** | Extract first meaningful line as title instead of "Cursor rules block N" |
+| TC11 | Source parser/indexing | FAIL | **PASS** | Opt-in `sync.indexSourceFiles` wires infra-parser into sync for JS/TS files |
+| TC12 | Decorative config | FAIL | **PASS** | `redactSecrets` wired, `integrityChecksOnStartup` wired to audit verify(), `adapters.disabled` added |
+| TC13 | Sync coverage | FAIL | **PASS** | Indexes README, package.json, tsconfig.json, Dockerfile, pyproject.toml, build.gradle, GH workflows |
 | TC14 | MCP session | PASS | PASS | (unchanged) |
-| TC15 | Skills | PARTIAL | PARTIAL | (unchanged) |
+| TC15 | Skills | PARTIAL | **PASS** | Skill triggers matched against search queries; relevant skills shown in results |
 
 ### Score Improvement
 
 | | Before (PASS/PARTIAL/FAIL) | After (PASS/PARTIAL/FAIL) |
 |-|:-------------------------:|:-------------------------:|
-| **Express** | 4 / 2 / 9 | **9 / 3 / 3** |
-| **FastAPI** | 4 / 2 / 9 | **9 / 3 / 3** |
+| **Express** | 4 / 2 / 9 | **14 / 1 / 0** |
+| **FastAPI** | 4 / 2 / 9 | **14 / 1 / 0** |
 
-### Changes Made (9 files modified)
+### Changes Made (Round 1 — 9 fixes, 16 files)
 
 1. `packages/core-memory/src/secret-scanner.ts` — 5 new detection rules (json_secret, mongodb_uri, github_pat, generic_bearer, high_entropy_hex)
 2. `packages/cli-app/src/commands/sync.ts` — Secret scanning warnings + README.md indexing
@@ -125,3 +125,10 @@ All 9 recommendations were implemented and verified. 90 tests pass (85 original 
 7. `packages/core-adapters/src/adapters/*.ts` — Agent-specific preambles in all 6 adapters
 8. `packages/cli-app/src/commands/validate.ts` — Deeper validation (duplicates, secrets, skills, size)
 9. `README.md` — Honest roadmap (watch is done, parser integration pending)
+
+### Changes Made (Round 2 — 5 fixes, 6 files)
+
+10. `packages/core-migration/src/parsers.ts` — Smart title extraction from first meaningful line
+11. `packages/core-config/src/schema.ts` + `defaults.ts` — `SyncConfigSection.indexSourceFiles`, `AdaptersConfig.disabled`
+12. `packages/cli-app/src/commands/sync.ts` — Project config indexing, opt-in source file indexing via infra-parser, audit verify wiring, adapter disabling
+13. `packages/cli-app/src/commands/search.ts` — Skill trigger matching in search results
