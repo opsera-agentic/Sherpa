@@ -61,7 +61,7 @@ export function createSherpaProgram(): Command {
       await runInit({
         projectRoot: resolveRoot(g),
         force: Boolean(opts.force),
-        template: opts.template ?? 'library',
+        template: opts.template,
         verbose: Boolean(g.verbose),
         json: Boolean(g.json),
       });

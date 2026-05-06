@@ -3,9 +3,11 @@ import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir, loadSherpaConfig } from '@sherpa/core-config';
-import { MemoryRepository } from '@sherpa/core-memory';
+import { MemoryRepository, scanForSecrets } from '@sherpa/core-memory';
 import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-adapters';
 import { loadSkills } from '@sherpa/core-skills';
+import { AuditService } from '@sherpa/core-audit';
+import { parseFile } from '@sherpa/infra-parser';
 
 export interface SyncCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -27,11 +29,36 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
   const dbPath = pathFromRoot(opts.projectRoot, config.memory.databasePath);
   const memory = new MemoryRepository(dbPath);
 
+  // Wire audit.integrityChecksOnStartup — verify hash chain before syncing
+  if (config.audit.enabled && config.audit.integrityChecksOnStartup) {
+    const audit = new AuditService(memory.getDatabase(), opts.projectRoot);
+    const verification = audit.verify();
+    if (!verification.valid) {
+      logger.warn('sync.audit', `Audit integrity check failed: ${verification.errors.length} error(s)`);
+      for (const err of verification.errors.slice(0, 5)) {
+        logger.warn('sync.audit', err);
+      }
+    }
+  }
+
+  // NOTE: config.privacy.allowTelemetry — No telemetry subsystem exists; reserved for future use.
+  // NOTE: config.security.requireTlsForRemoteProviders / config.security.allowedHosts — No HTTP client in CLI; reserved for future remote embedding provider support.
+
   let entriesUpdated = 0;
 
   const conventionsPath = path.join(sherpaDir, 'conventions.md');
   if (fs.existsSync(conventionsPath)) {
     const body = fs.readFileSync(conventionsPath, 'utf8');
+    if (config.privacy.redactSecrets) {
+      const scan = scanForSecrets(body);
+      if (scan.found) {
+        const rules = [...new Set(scan.matches.map((m) => m.ruleId))].join(', ');
+        logger.warn(
+          'sync.secrets',
+          `conventions.md contains ${scan.matches.length} potential secret(s) (rules: ${rules}). Review and remove before committing.`,
+        );
+      }
+    }
     memory.upsertEntry({
       workspace_id: 'default',
       title: 'conventions',
@@ -45,6 +72,16 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
 
   const decisions = readDecisions(path.join(sherpaDir, 'decisions'));
   decisions.forEach((content, idx) => {
+    if (config.privacy.redactSecrets) {
+      const scan = scanForSecrets(content);
+      if (scan.found) {
+        const rules = [...new Set(scan.matches.map((m) => m.ruleId))].join(', ');
+        logger.warn(
+          'sync.secrets',
+          `decision-${idx + 1} contains ${scan.matches.length} potential secret(s) (rules: ${rules}).`,
+        );
+      }
+    }
     memory.upsertEntry({
       workspace_id: 'default',
       title: `decision-${idx + 1}`,
@@ -55,6 +92,94 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
     });
     entriesUpdated += 1;
   });
+
+  // Index README.md as a reference entry for search discoverability
+  const readmePath = path.join(opts.projectRoot, 'README.md');
+  if (fs.existsSync(readmePath)) {
+    const readmeBody = fs.readFileSync(readmePath, 'utf8').trim();
+    if (readmeBody) {
+      memory.upsertEntry({
+        workspace_id: 'default',
+        title: 'README',
+        body: readmeBody,
+        type: 'reference',
+        tags: ['readme', 'overview'],
+        classification: 'public',
+      });
+      entriesUpdated += 1;
+    }
+  }
+
+  // Index common project config files for search discoverability
+  const projectConfigs: Array<{ file: string; tags: string[] }> = [
+    { file: 'package.json', tags: ['npm', 'dependencies'] },
+    { file: 'tsconfig.json', tags: ['typescript', 'compiler'] },
+    { file: 'Dockerfile', tags: ['docker', 'container'] },
+    { file: 'pyproject.toml', tags: ['python', 'build'] },
+    { file: 'build.gradle', tags: ['gradle', 'java'] },
+  ];
+  for (const { file, tags } of projectConfigs) {
+    const cfgPath = path.join(opts.projectRoot, file);
+    if (fs.existsSync(cfgPath)) {
+      const body = fs.readFileSync(cfgPath, 'utf8').trim();
+      if (body) {
+        memory.upsertEntry({
+          workspace_id: 'default',
+          title: file,
+          body,
+          type: 'project-config',
+          tags: ['project-config', ...tags],
+          classification: 'public',
+        });
+        entriesUpdated += 1;
+      }
+    }
+  }
+
+  // Index GitHub Actions workflows
+  const workflowsDir = path.join(opts.projectRoot, '.github', 'workflows');
+  if (fs.existsSync(workflowsDir)) {
+    for (const f of fs.readdirSync(workflowsDir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))) {
+      const body = fs.readFileSync(path.join(workflowsDir, f), 'utf8').trim();
+      if (body) {
+        memory.upsertEntry({
+          workspace_id: 'default',
+          title: `.github/workflows/${f}`,
+          body,
+          type: 'project-config',
+          tags: ['project-config', 'github-actions', 'ci'],
+          classification: 'public',
+        });
+        entriesUpdated += 1;
+      }
+    }
+  }
+
+  // Opt-in: index JS/TS source files via infra-parser
+  if (config.sync.indexSourceFiles) {
+    const sourceFiles = discoverSourceFiles(opts.projectRoot);
+    for (const relPath of sourceFiles.slice(0, 50)) {
+      const absPath = path.join(opts.projectRoot, relPath);
+      const content = fs.readFileSync(absPath, 'utf8');
+      const lang = relPath.endsWith('.ts') ? 'typescript' : 'javascript';
+      try {
+        const chunks = parseFile(relPath, content, lang);
+        for (const chunk of chunks) {
+          memory.upsertEntry({
+            workspace_id: 'default',
+            title: `${path.basename(relPath)}:${chunk.metadata.node_type}@L${chunk.metadata.start_line}`,
+            body: chunk.content,
+            type: 'source-chunk',
+            tags: ['source', lang, chunk.metadata.node_type],
+            classification: 'internal',
+          });
+          entriesUpdated += 1;
+        }
+      } catch {
+        logger.warn('sync.source', `Skipped ${relPath}: parse error`);
+      }
+    }
+  }
 
   const skills = loadSkills(sherpaDir).map((s) => ({
     name: s.name,
@@ -85,10 +210,12 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
   };
 
   const registry = createDefaultAdapterRegistry();
+  const disabledAdapters = new Set(config.adapters.disabled);
   let adaptersRegenerated = 0;
   const adapterRoot = path.join(sherpaDir, 'adapters');
   fs.mkdirSync(adapterRoot, { recursive: true });
   for (const name of registry.names()) {
+    if (disabledAdapters.has(name)) continue;
     const adapter = registry.get(name)!;
     const output = adapter.generate(context);
     const target = path.join(adapterRoot, output.filePath.replace(/\//g, '__'));
@@ -120,6 +247,32 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
   }
 
   memory.close();
+}
+
+function discoverSourceFiles(root: string): string[] {
+  const dirs = ['src', 'lib'];
+  const exts = ['.js', '.ts'];
+  const ignore = new Set(['node_modules', 'dist', '.sherpa', '.git', 'coverage', 'build', '__tests__']);
+  const results: string[] = [];
+
+  function walk(dir: string, rel: string): void {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (ignore.has(entry.name)) continue;
+      const fullPath = path.join(dir, entry.name);
+      const relPath = path.join(rel, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath, relPath);
+      } else if (exts.some((ext) => entry.name.endsWith(ext)) && !entry.name.endsWith('.d.ts') && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.test.js')) {
+        results.push(relPath);
+      }
+    }
+  }
+
+  for (const d of dirs) {
+    walk(path.join(root, d), d);
+  }
+  return results;
 }
 
 function pathFromRoot(root: string, relative: string): string {

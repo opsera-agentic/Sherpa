@@ -12,6 +12,9 @@ export class CodexCliAdapter extends BaseAdapter {
     const warnings: string[] = [];
     const content = `# Agent Instructions — ${context.projectName}
 
+> Codex operates in a sandboxed environment. Keep instructions actionable and terminal-focused.
+> Managed by Sherpa — edit \`.sherpa/conventions.md\` and run \`sherpa adapt\`.
+
 ## Project Overview
 
 ${context.projectDescription}

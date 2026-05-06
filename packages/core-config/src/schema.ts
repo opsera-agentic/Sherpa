@@ -10,6 +10,8 @@ export interface AdaptersConfig {
   readonly ide: AdapterToggle;
   readonly terminal: AdapterToggle;
   readonly http: AdapterToggle;
+  /** Agent adapter names to skip during generation (e.g. ['cursor', 'windsurf']). */
+  readonly disabled: readonly string[];
 }
 
 export interface MemoryConfigSection {
@@ -66,8 +68,14 @@ export interface SecurityConfigSection {
   readonly allowedHosts: readonly string[];
 }
 
+export interface SyncConfigSection {
+  /** When true, index JS/TS source files from src/ and lib/ during sync (default: false). */
+  readonly indexSourceFiles: boolean;
+}
+
 export interface SherpaConfig {
   readonly adapters: AdaptersConfig;
+  readonly sync: SyncConfigSection;
   readonly memory: MemoryConfigSection;
   readonly search: SearchConfigSection;
   readonly skills: SkillsConfigSection;
@@ -278,6 +286,7 @@ export function validatePartialStructure(parsed: unknown): ValidationResult {
   };
 
   sectionMustBeObject('adapters');
+  sectionMustBeObject('sync');
   sectionMustBeObject('memory');
   sectionMustBeObject('search');
   sectionMustBeObject('skills');
@@ -317,6 +326,7 @@ export function mergeWithDefaults(partial: unknown): SherpaConfig {
   if (!isRecord(partial)) return defaults;
 
   const adaptersIn = isRecord(partial.adapters) ? partial.adapters : {};
+  const syncIn = isRecord(partial.sync) ? partial.sync : {};
   const memoryIn = isRecord(partial.memory) ? partial.memory : {};
   const searchIn = isRecord(partial.search) ? partial.search : {};
   const skillsIn = isRecord(partial.skills) ? partial.skills : {};
@@ -335,6 +345,10 @@ export function mergeWithDefaults(partial: unknown): SherpaConfig {
       ide: mergeToggle(defaults.adapters.ide, adaptersIn.ide),
       terminal: mergeToggle(defaults.adapters.terminal, adaptersIn.terminal),
       http: mergeToggle(defaults.adapters.http, adaptersIn.http),
+      disabled: strArr(adaptersIn.disabled) ? [...adaptersIn.disabled] : [...defaults.adapters.disabled],
+    },
+    sync: {
+      indexSourceFiles: bool(syncIn.indexSourceFiles) ? syncIn.indexSourceFiles : defaults.sync.indexSourceFiles,
     },
     memory: {
       databasePath: str(memoryIn.databasePath) ? memoryIn.databasePath : defaults.memory.databasePath,

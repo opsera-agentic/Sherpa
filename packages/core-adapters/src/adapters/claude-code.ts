@@ -12,6 +12,7 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     const warnings: string[] = [];
     const lines = [
       this.formatHeader('Sherpa Adapter Export'),
+      '> This file is managed by Sherpa. Edit `.sherpa/conventions.md` to update, then run `sherpa adapt`.\n',
       this.section('Project Overview', `${context.projectName}\n\n${context.projectDescription}`),
       this.section('Coding Conventions', context.conventions || '(none documented yet)'),
       this.section(

@@ -26,6 +26,9 @@ export class CursorAdapter extends BaseAdapter {
       context.decisions.length === 0 ? '(none)' : context.decisions.map((d) => `- ${d}`).join('\n');
 
     const content = `${this.formatHeader(`Project: ${context.projectName}`)}
+# Rules are evaluated top-down. Place the most important rules first.
+# Managed by Sherpa — edit .sherpa/conventions.md and run \`sherpa adapt\`.
+
 Summary:
 ${context.projectDescription}
 

@@ -1,9 +1,10 @@
 import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
-import { loadSherpaConfig } from '@sherpa/core-config';
+import { getSherpaDir, loadSherpaConfig } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
 import { SearchService } from '@sherpa/core-search';
+import { loadSkills } from '@sherpa/core-skills';
 
 export interface SearchCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -34,8 +35,18 @@ export async function runSearch(opts: SearchCommandOptions): Promise<void> {
 
     logger.debug('search.complete', `hits:${hits.length}`);
 
+    // Match query against skill triggers
+    const skills = loadSkills(getSherpaDir(opts.projectRoot));
+    const queryLower = opts.query.toLowerCase();
+    const matchedSkills = skills.filter(
+      (s) =>
+        s.triggers.some((t) => queryLower.includes(t.toLowerCase())) ||
+        queryLower.includes(s.name.toLowerCase()),
+    );
+
     if (opts.json) {
-      process.stdout.write(`${JSON.stringify({ hits })}\n`);
+      const skillSummaries = matchedSkills.map((s) => ({ name: s.name, description: s.description, triggers: s.triggers }));
+      process.stdout.write(`${JSON.stringify({ hits, skills: skillSummaries })}\n`);
       return;
     }
 
@@ -60,6 +71,13 @@ export async function runSearch(opts: SearchCommandOptions): Promise<void> {
       process.stdout.write(
         `${pad(row.title, widths.title)} | ${pad(row.snippet, widths.snippet)} | ${pad(row.score, widths.score)} | ${pad(row.type, widths.type)}\n`,
       );
+    }
+
+    if (matchedSkills.length > 0) {
+      process.stdout.write(`\nRelevant skills:\n`);
+      for (const skill of matchedSkills) {
+        process.stdout.write(`  ${skill.name} — ${skill.description}\n`);
+      }
     }
   } finally {
     memory.close();

@@ -19,6 +19,9 @@ export class GeminiCliAdapter extends BaseAdapter {
 
     const content = `# GEMINI.md — ${context.projectName}
 
+> Gemini CLI reads this file for project context. Structure sections clearly with ## headers.
+> Managed by Sherpa — edit \`.sherpa/conventions.md\` and run \`sherpa adapt\`.
+
 ## Project Overview
 
 ${context.projectDescription}

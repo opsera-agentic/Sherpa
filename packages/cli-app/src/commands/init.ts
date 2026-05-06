@@ -28,6 +28,44 @@ const AGENT_FILES = [
   { agent: 'windsurf', file: '.windsurfrules' },
 ];
 
+function detectProjectType(projectRoot: string): StarterTemplateId {
+  const pkgPath = path.join(projectRoot, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      if (pkg.workspaces) return 'monorepo';
+      if (pkg.bin) return 'cli-tool';
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+      const depNames = Object.keys(allDeps);
+      const webFrameworks = [
+        'react', 'vue', 'next', 'nuxt', 'svelte', '@angular/core',
+        'express', 'fastify', 'koa', 'hono', 'nest', '@nestjs/core',
+      ];
+      if (depNames.some((d) => webFrameworks.includes(d))) return 'web-app';
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Non-JS project detection
+  const jvmIndicators = ['pom.xml', 'build.gradle', 'build.gradle.kts'];
+  if (jvmIndicators.some((f) => fs.existsSync(path.join(projectRoot, f)))) return 'web-app';
+
+  const pyprojectPath = path.join(projectRoot, 'pyproject.toml');
+  if (fs.existsSync(pyprojectPath)) {
+    try {
+      const content = fs.readFileSync(pyprojectPath, 'utf8');
+      if (/(?:flask|django|fastapi|starlette)/i.test(content)) return 'web-app';
+    } catch {
+      /* ignore */
+    }
+    return 'library';
+  }
+  if (fs.existsSync(path.join(projectRoot, 'setup.py'))) return 'library';
+
+  return 'library';
+}
+
 function skillDirectoryName(skillName: string): string {
   const slug = skillName
     .trim()
@@ -54,7 +92,7 @@ export async function runInit(opts: InitCommandOptions): Promise<void> {
     fs.mkdirSync(path.join(sherpaDir, sub), { recursive: true });
   }
 
-  const templateId = opts.template ?? 'library';
+  const templateId = opts.template ?? detectProjectType(opts.projectRoot);
   const starter = getStarterTemplate(templateId);
 
   const mergedConfig = mergeWithDefaults(starter.config);
