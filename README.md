@@ -49,17 +49,27 @@ Write once → sherpa adapt → every agent speaks your project's language
 
 ## Installation
 
+### From source (recommended)
+
 ```bash
-npm install -g @sherpa/cli-app
+# Clone the repository
+git clone https://github.com/opsera-agentic/Sherpa.git
+cd Sherpa
+
+# Install dependencies and build
+npm ci
+npm run build
+
+# Link globally (makes `sherpa` available everywhere)
+npm link -w packages/cli-app
+
+# Verify
+sherpa --version
 ```
 
 **Requirements:** Node.js 22+ (LTS recommended)
 
-Verify the installation:
-
-```bash
-sherpa --version
-```
+> **Note:** `npm install -g @sherpa/cli-app` will be available once the package is published to npm.
 
 ## Quick Start
 
