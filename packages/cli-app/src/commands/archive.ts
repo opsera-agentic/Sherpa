@@ -3,6 +3,7 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { loadSherpaConfig } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
+import { withTelemetry } from '../telemetry.js';
 
 export interface ArchiveCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -10,6 +11,12 @@ export interface ArchiveCommandOptions extends LoggerOptions {
 }
 
 export async function runArchive(opts: ArchiveCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'archive', async () => {
+    return await _runArchive(opts);
+  });
+}
+
+async function _runArchive(opts: ArchiveCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('archive', opts);
   const cutoff = parseDuration(opts.olderThan);
   const config = loadSherpaConfig(opts.projectRoot);
@@ -22,6 +29,7 @@ export async function runArchive(opts: ArchiveCommandOptions): Promise<void> {
     } else {
       logger.info('archive.complete', `Archived ${removed} stale entries`);
     }
+    return { archivedEntries: removed };
   } finally {
     memory.close();
   }

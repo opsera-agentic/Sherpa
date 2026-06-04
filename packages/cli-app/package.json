@@ -26,7 +26,10 @@
     "@sherpa/core-migration": "0.1.0",
     "@sherpa/core-search": "0.1.0",
     "@sherpa/core-skills": "0.1.0",
+    "@sherpa/core-telemetry": "0.1.0",
+    "@sherpa/infra-sqlite": "0.1.0",
     "@sherpa/mcp-server": "0.1.0",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0"
   }
 }

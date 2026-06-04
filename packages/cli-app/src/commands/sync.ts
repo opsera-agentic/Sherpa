@@ -8,6 +8,7 @@ import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-
 import { loadSkills } from '@sherpa/core-skills';
 import { AuditService } from '@sherpa/core-audit';
 import { parseFile } from '@sherpa/infra-parser';
+import { withTelemetry } from '../telemetry.js';
 
 export interface SyncCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -23,6 +24,12 @@ function readDecisions(decisionsDir: string): string[] {
 }
 
 export async function runSync(opts: SyncCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'sync', async () => {
+    return await _runSync(opts);
+  });
+}
+
+async function _runSync(opts: SyncCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('sync', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
   const config = loadSherpaConfig(opts.projectRoot);
@@ -41,7 +48,6 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
     }
   }
 
-  // NOTE: config.privacy.allowTelemetry — No telemetry subsystem exists; reserved for future use.
   // NOTE: config.security.requireTlsForRemoteProviders / config.security.allowedHosts — No HTTP client in CLI; reserved for future remote embedding provider support.
 
   let entriesUpdated = 0;
@@ -247,6 +253,18 @@ export async function runSync(opts: SyncCommandOptions): Promise<void> {
   }
 
   memory.close();
+
+  // Collect which adapters were generated (e.g. ["claude-code", "cursor", "copilot"])
+  const activeAdapters = registry.names().filter((n) => !disabledAdapters.has(n));
+
+  return {
+    entriesUpdated,
+    adaptersRegenerated,
+    activeAdapters,
+    disabledAdapters: [...disabledAdapters],
+    chunksIndexed: indexStats.chunks,
+    sourceIndexingEnabled: config.sync.indexSourceFiles,
+  };
 }
 
 function discoverSourceFiles(root: string): string[] {

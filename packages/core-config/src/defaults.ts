@@ -48,6 +48,13 @@ export function getDefaultConfig(): SherpaConfig {
       jsonlRotation: 'monthly',
       integrityChecksOnStartup: false,
     },
+    telemetry: {
+      enabled: true,
+      endpoint: 'https://us.i.posthog.com/batch',
+      apiKey: '',
+      batchSize: 25,
+      flushIntervalSeconds: 300,
+    },
     privacy: {
       redactSecrets: true,
       allowTelemetry: false,

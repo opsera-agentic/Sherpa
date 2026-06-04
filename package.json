@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @sherpa/infra-sqlite && npm run build -w @sherpa/infra-parser && npm run build -w @sherpa/infra-embedding && npm run build -w @sherpa/core-config && npm run build -w @sherpa/core-audit && npm run build -w @sherpa/core-memory && npm run build -w @sherpa/core-skills && npm run build -w @sherpa/core-search && npm run build -w @sherpa/core-adapters && npm run build -w @sherpa/core-migration && npm run build -w @sherpa/mcp-server && npm run build -w @sherpa/cli-app",
+    "build": "npm run build -w @sherpa/infra-sqlite && npm run build -w @sherpa/infra-parser && npm run build -w @sherpa/infra-embedding && npm run build -w @sherpa/core-config && npm run build -w @sherpa/core-audit && npm run build -w @sherpa/core-memory && npm run build -w @sherpa/core-skills && npm run build -w @sherpa/core-search && npm run build -w @sherpa/core-adapters && npm run build -w @sherpa/core-migration && npm run build -w @sherpa/core-telemetry && npm run build -w @sherpa/mcp-server && npm run build -w @sherpa/cli-app",
     "lint": "eslint 'packages/*/src/**/*.ts'",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

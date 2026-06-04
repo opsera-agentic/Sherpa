@@ -4,6 +4,7 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir } from '@sherpa/core-config';
 import { parseAgentConfig, type ParsedMemoryDraft } from '@sherpa/core-migration';
+import { withTelemetry } from '../telemetry.js';
 
 export type AgentSourceId = 'claude-code' | 'cursor' | 'codex-cli' | 'gemini-cli' | 'copilot' | 'windsurf';
 
@@ -86,6 +87,12 @@ async function pullOne(
 }
 
 export async function runPull(opts: PullCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'pull', async () => {
+    return await _runPull(opts);
+  });
+}
+
+async function _runPull(opts: PullCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('pull', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
   const conventionsPath = path.join(sherpaDir, 'conventions.md');
@@ -105,4 +112,6 @@ export async function runPull(opts: PullCommandOptions): Promise<void> {
   } else {
     process.stdout.write(`Pull complete — ${updated} agent file(s) synced into conventions.md\n`);
   }
+
+  return { agentsUpdated: updated, agentsScanned: targets };
 }

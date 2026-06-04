@@ -4,12 +4,19 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir } from '@sherpa/core-config';
 import { scanForSecrets } from '@sherpa/core-memory';
+import { withTelemetry } from '../telemetry.js';
 
 export interface ValidateCommandOptions extends LoggerOptions {
   projectRoot: string;
 }
 
 export async function runValidate(opts: ValidateCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'validate', async () => {
+    return await _runValidate(opts);
+  });
+}
+
+async function _runValidate(opts: ValidateCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('validate', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
   const conventionsPath = path.join(sherpaDir, 'conventions.md');
@@ -76,7 +83,7 @@ export async function runValidate(opts: ValidateCommandOptions): Promise<void> {
 
   if (opts.json) {
     process.stdout.write(`${JSON.stringify({ valid: ok, errors, warnings })}\n`);
-    return;
+    return { valid: ok, errorCount: errors.length, warningCount: warnings.length };
   }
 
   warnings.forEach((w) => logger.warn('validate.warning', w));
@@ -87,4 +94,6 @@ export async function runValidate(opts: ValidateCommandOptions): Promise<void> {
   }
 
   logger.info('validate.success', 'Convention documents look healthy');
+
+  return { valid: ok, errorCount: errors.length, warningCount: warnings.length };
 }

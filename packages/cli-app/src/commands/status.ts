@@ -3,12 +3,19 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { loadSherpaConfig } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
+import { withTelemetry } from '../telemetry.js';
 
 export interface StatusCommandOptions extends LoggerOptions {
   projectRoot: string;
 }
 
 export async function runStatus(opts: StatusCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'status', async () => {
+    return await _runStatus(opts);
+  });
+}
+
+async function _runStatus(opts: StatusCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('status', opts);
   const config = loadSherpaConfig(opts.projectRoot);
   const dbPath = pathFromRoot(opts.projectRoot, config.memory.databasePath);
@@ -22,6 +29,7 @@ export async function runStatus(opts: StatusCommandOptions): Promise<void> {
     } else {
       logger.info('status.summary', `Entries ${entries}, database ${bytes} bytes`);
     }
+    return { entries, databaseBytes: bytes };
   } finally {
     memory.close();
   }

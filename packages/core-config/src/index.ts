@@ -24,6 +24,7 @@ export type {
   SecurityConfigSection,
   SherpaConfig,
   SkillsConfigSection,
+  TelemetryConfigSection,
   ValidationIssue,
   ValidationResult,
 } from './schema.js';

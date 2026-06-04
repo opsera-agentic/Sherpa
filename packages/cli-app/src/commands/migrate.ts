@@ -4,6 +4,7 @@ import { createLogger } from '../logger.js';
 import { loadSherpaConfig } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
 import { MigrationService, type AgentSource } from '@sherpa/core-migration';
+import { withTelemetry } from '../telemetry.js';
 
 export interface MigrateCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -12,6 +13,12 @@ export interface MigrateCommandOptions extends LoggerOptions {
 }
 
 export async function runMigrate(opts: MigrateCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'migrate', async () => {
+    return await _runMigrate(opts);
+  });
+}
+
+async function _runMigrate(opts: MigrateCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('migrate', opts);
   const config = loadSherpaConfig(opts.projectRoot);
   const dbPath = pathFromRoot(opts.projectRoot, config.memory.databasePath);
@@ -34,6 +41,7 @@ export async function runMigrate(opts: MigrateCommandOptions): Promise<void> {
         report.errors.forEach((err) => logger.error('migrate.error', err));
       }
     }
+    return { source: opts.from, entriesCreated: report.entriesCreated, dryRun: Boolean(opts.dryRun) };
   } finally {
     memory.close();
   }
