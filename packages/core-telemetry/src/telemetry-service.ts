@@ -5,7 +5,7 @@ import https from 'node:https';
 import http from 'node:http';
 
 import { TelemetryRepository } from './telemetry-repository.js';
-import { generateAnonymousId, getSystemInfo } from './identity.js';
+import { getSystemInfo } from './identity.js';
 import type { TelemetryConfig, TelemetryEvent, SystemInfo, UsageStats } from './types.js';
 
 // Re-export Database type from infra-sqlite so callers don't need the direct dep

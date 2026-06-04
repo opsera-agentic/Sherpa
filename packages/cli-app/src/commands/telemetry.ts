@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir, getSherpaConfigPath, loadSherpaConfig } from '@sherpa/core-config';
