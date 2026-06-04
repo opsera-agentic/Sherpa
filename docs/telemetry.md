@@ -1,6 +1,6 @@
 # Telemetry
 
-Sherpa collects **anonymous usage metrics** by default to help us understand how the tool is used and prioritize improvements. You can opt out at any time.
+Sherpa can collect **anonymous usage metrics** to help us understand how the tool is used and prioritize improvements. Telemetry is **opt-in** — it is disabled by default and nothing is collected or sent until you explicitly enable it with `sherpa telemetry enable`.
 
 ## Quick Start
 
@@ -64,12 +64,20 @@ Telemetry settings live in `.sherpa/sherpa.config.yaml`:
 
 ```yaml
 telemetry:
-  enabled: true           # Master switch (default: true)
+  enabled: false          # Operational toggle (default: false)
   endpoint: https://us.i.posthog.com/batch  # PostHog endpoint
   apiKey: ''              # PostHog project API key
   batchSize: 25           # Events per flush
   flushIntervalSeconds: 300  # Seconds between flushes
+privacy:
+  allowTelemetry: false   # Privacy master switch (default: false)
 ```
+
+Collection happens only when **both** `telemetry.enabled` and
+`privacy.allowTelemetry` are true. `sherpa telemetry enable` sets both;
+`sherpa telemetry disable` clears the operational toggle. Pin
+`privacy.allowTelemetry: false` (e.g. via a committed config) to guarantee
+telemetry can never be turned on.
 
 ## Data Retention
 
@@ -83,8 +91,8 @@ As an open source project, we believe in transparency:
 
 - This telemetry implementation is fully visible in our source code (`packages/core-telemetry/`)
 - The exact events collected are documented above and in the code
-- Telemetry is **enabled by default** — you can opt out at any time
-- To disable: `sherpa telemetry disable`
+- Telemetry is **opt-in** — disabled by default, nothing is collected until you enable it
+- To enable: `sherpa telemetry enable` · to disable again: `sherpa telemetry disable`
 
 ## Self-Hosting
 

@@ -226,11 +226,12 @@ export function showFirstRunTelemetryNotice(projectRoot: string): void {
 
   process.stderr.write(
     '\n' +
-    '  Sherpa collects anonymous usage metrics to help improve the tool.\n' +
+    '  Sherpa can collect anonymous usage metrics to help improve the tool.\n' +
+    '  Telemetry is OFF by default — nothing is collected unless you opt in.\n' +
     '  No file contents, paths, or personal data are ever collected.\n' +
     '\n' +
-    '  To opt out:  sherpa telemetry disable\n' +
-    '  To see what is collected: sherpa telemetry status\n' +
+    '  To opt in:   sherpa telemetry enable\n' +
+    '  To see what would be collected: sherpa telemetry status\n' +
     '  Learn more:  https://github.com/anthropics/sherpa/blob/main/docs/telemetry.md\n' +
     '\n',
   );

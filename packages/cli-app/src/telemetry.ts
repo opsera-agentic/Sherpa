@@ -6,6 +6,23 @@ import { TelemetryService, showFirstRunTelemetryNotice } from '@sherpa/core-tele
 import { initDatabase } from '@sherpa/infra-sqlite';
 
 /**
+ * Whether telemetry is permitted to record/send anything.
+ *
+ * Two switches must both agree, so neither can silently contradict the other:
+ *  - telemetry.enabled    — the operational toggle (`sherpa telemetry enable`)
+ *  - privacy.allowTelemetry — the privacy master kill-switch
+ *
+ * Both default to false, so a fresh install is opt-in: nothing is collected
+ * until the user explicitly enables it.
+ */
+export function isTelemetryAllowed(config: {
+  telemetry: { enabled: boolean };
+  privacy: { allowTelemetry: boolean };
+}): boolean {
+  return config.telemetry.enabled && config.privacy.allowTelemetry;
+}
+
+/**
  * Create a TelemetryService for the given project root.
  *
  * Returns null if telemetry is disabled, .sherpa doesn't exist, or the
@@ -20,7 +37,7 @@ export function createTelemetry(projectRoot: string): TelemetryService | null {
     showFirstRunTelemetryNotice(projectRoot);
 
     const config = loadSherpaConfig(projectRoot);
-    if (!config.telemetry.enabled) return null;
+    if (!isTelemetryAllowed(config)) return null;
 
     const dbPath = path.isAbsolute(config.memory.databasePath)
       ? config.memory.databasePath

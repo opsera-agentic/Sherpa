@@ -19,6 +19,12 @@ describe('core-config', () => {
     expect(cfg.adapters.filesystem.enabled).toBe(true);
   });
 
+  it('telemetry is opt-in: disabled by default and privacy.allowTelemetry false', () => {
+    const cfg = getDefaultConfig();
+    expect(cfg.telemetry.enabled).toBe(false);
+    expect(cfg.privacy.allowTelemetry).toBe(false);
+  });
+
   it('mergeWithDefaults fills gaps', () => {
     const merged = mergeWithDefaults({ search: { provider: 'hybrid' } });
     expect(merged.search.provider).toBe('hybrid');

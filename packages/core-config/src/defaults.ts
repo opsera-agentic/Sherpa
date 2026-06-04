@@ -49,7 +49,10 @@ export function getDefaultConfig(): SherpaConfig {
       integrityChecksOnStartup: false,
     },
     telemetry: {
-      enabled: true,
+      // Opt-in by default. Collection also requires privacy.allowTelemetry,
+      // so a fresh install never records or sends anything until the user
+      // runs `sherpa telemetry enable`.
+      enabled: false,
       endpoint: 'https://us.i.posthog.com/batch',
       apiKey: '',
       batchSize: 25,
