@@ -48,7 +48,16 @@ export class TelemetryRepository {
     `);
   }
 
-  /** Insert a single telemetry event into local storage. */
+  /**
+   * Insert a single telemetry event into local storage.
+   *
+   * `INSERT OR IGNORE` makes the write idempotent on the `id` primary key
+   * (safe to retry the same event). The trade-off is that it also silently
+   * ignores constraint failures — in particular, a `NULL` in any `NOT NULL`
+   * column would drop the row with no error. To stay robust against partially
+   * populated events, every column is coalesced to the same default the schema
+   * declares before binding, so a missing optional field never costs us data.
+   */
   insert(event: TelemetryEvent): void {
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO telemetry_events
@@ -61,16 +70,16 @@ export class TelemetryRepository {
       event.anonymous_id,
       event.command,
       event.success ? 1 : 0,
-      event.duration_ms,
-      event.cli_version,
-      event.node_version,
-      event.os_platform,
-      event.os_arch,
-      event.os_version,
-      event.ide,
-      event.install_source,
-      event.timezone,
-      JSON.stringify(event.metadata),
+      event.duration_ms ?? 0,
+      event.cli_version ?? '0.0.0',
+      event.node_version ?? '',
+      event.os_platform ?? '',
+      event.os_arch ?? '',
+      event.os_version ?? '',
+      event.ide ?? 'terminal',
+      event.install_source ?? 'unknown',
+      event.timezone ?? 'unknown',
+      JSON.stringify(event.metadata ?? {}),
       event.created_at,
     );
   }
