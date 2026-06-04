@@ -38,7 +38,7 @@ async function _runSync(opts: SyncCommandOptions): Promise<Record<string, unknow
 
   // Wire audit.integrityChecksOnStartup — verify hash chain before syncing
   if (config.audit.enabled && config.audit.integrityChecksOnStartup) {
-    const audit = new AuditService(memory.getDatabase(), opts.projectRoot);
+    const audit = new AuditService(memory.getDatabase(), opts.projectRoot, config.audit.jsonlRotation);
     const verification = audit.verify();
     if (!verification.valid) {
       logger.warn('sync.audit', `Audit integrity check failed: ${verification.errors.length} error(s)`);

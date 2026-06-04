@@ -25,6 +25,23 @@ export type AuditLogInput = {
   readonly details?: Record<string, unknown>;
 };
 
+/** How the mirrored JSONL audit files are split over time. */
+export type JsonlRotation = 'monthly' | 'daily' | 'none';
+
+/** Filename stem (no extension) for the JSONL mirror given a rotation policy. */
+export function jsonlRotationKey(createdAtMs: number, rotation: JsonlRotation): string {
+  const iso = new Date(createdAtMs).toISOString();
+  switch (rotation) {
+    case 'daily':
+      return iso.slice(0, 10); // YYYY-MM-DD
+    case 'none':
+      return 'audit'; // single rolling file
+    case 'monthly':
+    default:
+      return iso.slice(0, 7); // YYYY-MM
+  }
+}
+
 /** MCP-facing telemetry payloads routed through {@link AuditService}. */
 export interface AuditTrailEvent {
   readonly module: string;
@@ -87,6 +104,7 @@ export class AuditService implements AuditTrail {
   constructor(
     private readonly db: SqliteDatabase,
     private readonly projectRoot: string,
+    private readonly rotation: JsonlRotation = 'monthly',
   ) {
     this.repo = new AuditEventRepository(db);
   }
@@ -121,8 +139,8 @@ export class AuditService implements AuditTrail {
 
     const auditDir = path.join(this.projectRoot, '.sherpa', 'audit');
     fs.mkdirSync(auditDir, { recursive: true });
-    const monthKey = new Date(created_at).toISOString().slice(0, 7);
-    const jsonlPath = path.join(auditDir, `${monthKey}.jsonl`);
+    const fileKey = jsonlRotationKey(created_at, this.rotation);
+    const jsonlPath = path.join(auditDir, `${fileKey}.jsonl`);
     fs.appendFileSync(
       jsonlPath,
       `${JSON.stringify({

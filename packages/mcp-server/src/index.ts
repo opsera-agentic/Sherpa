@@ -26,7 +26,7 @@ export class SherpaMcpServer {
       ? configuredPath
       : path.join(options.projectRoot, configuredPath);
     const memory = new MemoryRepository(dbPath);
-    const audit = new AuditService(memory.getDatabase(), options.projectRoot);
+    const audit = new AuditService(memory.getDatabase(), options.projectRoot, config.audit.jsonlRotation);
     this.sessionToken = randomUUID();
     this.toolCtx = {
       memory,

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initDatabase } from '@sherpa/infra-sqlite';
 
-import { AuditService } from './index.js';
+import { AuditService, jsonlRotationKey } from './index.js';
 
 let tmp: string | undefined;
 
@@ -65,6 +65,38 @@ describe('core-audit', () => {
 
     const verify = audit.verify();
     expect(verify.valid).toBe(true);
+
+    db.close();
+  });
+
+  it('jsonlRotationKey maps each policy to the right filename stem', () => {
+    const ts = Date.parse('2026-03-09T12:34:56.000Z');
+    expect(jsonlRotationKey(ts, 'monthly')).toBe('2026-03');
+    expect(jsonlRotationKey(ts, 'daily')).toBe('2026-03-09');
+    expect(jsonlRotationKey(ts, 'none')).toBe('audit');
+  });
+
+  it('honors the jsonlRotation policy when writing the JSONL mirror', () => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-audit-rotation-'));
+    const db = initDatabase(path.join(tmp, 'db.sqlite'));
+
+    const frozen = Date.parse('2026-03-09T12:00:00.000Z');
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(frozen);
+    try {
+      // daily
+      const daily = new AuditService(db, tmp, 'daily');
+      daily.log({ operation: 'x', resource_type: 't', resource_id: '1', details: {} });
+      // none
+      const none = new AuditService(db, tmp, 'none');
+      none.log({ operation: 'y', resource_type: 't', resource_id: '2', details: {} });
+    } finally {
+      spy.mockRestore();
+    }
+
+    const auditDir = path.join(tmp, '.sherpa', 'audit');
+    expect(fs.existsSync(path.join(auditDir, '2026-03-09.jsonl'))).toBe(true); // daily
+    expect(fs.existsSync(path.join(auditDir, 'audit.jsonl'))).toBe(true); // none
+    expect(fs.existsSync(path.join(auditDir, '2026-03.jsonl'))).toBe(false); // not monthly
 
     db.close();
   });
