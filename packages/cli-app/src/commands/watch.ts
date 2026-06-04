@@ -4,6 +4,7 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { runPull, type AgentSourceId } from './pull.js';
 import { runAdapt } from './adapt.js';
+import { withTelemetry } from '../telemetry.js';
 
 const AGENT_FILES: Array<{ agentId: AgentSourceId; file: string }> = [
   { agentId: 'claude-code', file: 'CLAUDE.md' },
@@ -19,6 +20,12 @@ export interface WatchCommandOptions extends LoggerOptions {
 }
 
 export async function runWatch(opts: WatchCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'watch', async () => {
+    return await _runWatch(opts);
+  });
+}
+
+async function _runWatch(opts: WatchCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('watch', opts);
 
   const watchable = AGENT_FILES.filter(({ file }) =>
@@ -27,7 +34,7 @@ export async function runWatch(opts: WatchCommandOptions): Promise<void> {
 
   if (!watchable.length) {
     logger.warn('watch.nothing', 'No agent files found to watch. Run sherpa adapt first to create them.');
-    return;
+    return { watchedFiles: 0 };
   }
 
   process.stdout.write(`Watching ${watchable.length} agent file(s) for changes. Press Ctrl+C to stop.\n`);
@@ -85,4 +92,6 @@ export async function runWatch(opts: WatchCommandOptions): Promise<void> {
     });
     process.on('SIGTERM', resolve);
   });
+
+  return { watchedFiles: watchable.length };
 }

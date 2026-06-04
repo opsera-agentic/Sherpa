@@ -23,6 +23,7 @@
     { "path": "packages/core-skills" },
     { "path": "packages/core-adapters" },
     { "path": "packages/core-migration" },
+    { "path": "packages/core-telemetry" },
     { "path": "packages/infra-sqlite" },
     { "path": "packages/infra-parser" },
     { "path": "packages/infra-embedding" },

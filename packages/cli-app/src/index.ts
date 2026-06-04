@@ -20,8 +20,10 @@ import { runPull } from './commands/pull.js';
 import { runSearch } from './commands/search.js';
 import { runServe } from './commands/serve.js';
 import { runSkills } from './commands/skills.js';
+import { runStats } from './commands/stats.js';
 import { runStatus } from './commands/status.js';
 import { runSync } from './commands/sync.js';
+import { runTelemetry } from './commands/telemetry.js';
 import { runValidate } from './commands/validate.js';
 import { runWatch } from './commands/watch.js';
 import { createLogger } from './logger.js';
@@ -266,6 +268,60 @@ export function createSherpaProgram(): Command {
     .action(async (_opts, cmd) => {
       const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
       await runWatch({
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  // Telemetry management commands
+  const telemetry = program.command('telemetry').description('Manage anonymous usage telemetry');
+
+  telemetry
+    .command('enable')
+    .description('Enable anonymous telemetry collection')
+    .action(async (_opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runTelemetry({
+        action: 'enable',
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  telemetry
+    .command('disable')
+    .description('Disable anonymous telemetry collection')
+    .action(async (_opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runTelemetry({
+        action: 'disable',
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  telemetry
+    .command('status')
+    .description('Show telemetry configuration and what data is collected')
+    .action(async (_opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runTelemetry({
+        action: 'status',
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  program
+    .command('stats')
+    .description('Show local usage statistics')
+    .action(async (_opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runStats({
         projectRoot: resolveRoot(g),
         verbose: Boolean(g.verbose),
         json: Boolean(g.json),

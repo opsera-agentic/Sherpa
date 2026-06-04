@@ -12,6 +12,7 @@ import { MemoryRepository } from '@sherpa/core-memory';
 import { parseAgentConfig, type ParsedMemoryDraft } from '@sherpa/core-migration';
 
 import { getStarterTemplate, skillToMarkdown, type StarterTemplateId } from '../templates/index.js';
+import { withTelemetry } from '../telemetry.js';
 
 export interface InitCommandOptions extends LoggerOptions {
   force?: boolean;
@@ -76,6 +77,12 @@ function skillDirectoryName(skillName: string): string {
 }
 
 export async function runInit(opts: InitCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'init', async () => {
+    return await _runInit(opts);
+  });
+}
+
+async function _runInit(opts: InitCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('init', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
 
@@ -159,4 +166,11 @@ export async function runInit(opts: InitCommandOptions): Promise<void> {
   if (!opts.json) {
     process.stdout.write(`Sherpa initialized at ${sherpaDir}\n`);
   }
+
+  return {
+    projectType: templateId,
+    detectedAgents: detected.map((x) => x.agent),
+    detectedAgentCount: detected.length,
+    skillsScaffolded: starter.skills.length,
+  };
 }

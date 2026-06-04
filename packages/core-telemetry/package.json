@@ -1,5 +1,5 @@
 {
-  "name": "@sherpa/infra-sqlite",
+  "name": "@sherpa/core-telemetry",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,16 +10,12 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -b"
   },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11"
-  },
   "dependencies": {
-    "better-sqlite3": "^12.10.0"
+    "@sherpa/core-config": "0.1.0",
+    "@sherpa/infra-sqlite": "0.1.0"
   }
 }

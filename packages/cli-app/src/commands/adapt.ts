@@ -5,6 +5,7 @@ import { createLogger } from '../logger.js';
 import { getSherpaDir } from '@sherpa/core-config';
 import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-adapters';
 import { loadSkills } from '@sherpa/core-skills';
+import { withTelemetry } from '../telemetry.js';
 
 
 export interface AdaptCommandOptions extends LoggerOptions {
@@ -22,6 +23,12 @@ function readDecisions(decisionsDir: string): string[] {
 }
 
 export async function runAdapt(opts: AdaptCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'adapt', async () => {
+    return await _runAdapt(opts);
+  });
+}
+
+async function _runAdapt(opts: AdaptCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('adapt', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
   const registry = createDefaultAdapterRegistry();
@@ -81,4 +88,11 @@ export async function runAdapt(opts: AdaptCommandOptions): Promise<void> {
       process.stdout.write(`${row.agent} -> ${row.filePath} (valid=${row.valid})\n`);
     }
   }
+
+  return {
+    adaptersGenerated: report.length,
+    agents: names,
+    validCount: report.filter((r) => r.valid).length,
+    warningCount: report.reduce((sum, r) => sum + r.warnings.length, 0),
+  };
 }

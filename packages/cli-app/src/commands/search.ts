@@ -5,6 +5,7 @@ import { getSherpaDir, loadSherpaConfig } from '@sherpa/core-config';
 import { MemoryRepository } from '@sherpa/core-memory';
 import { SearchService } from '@sherpa/core-search';
 import { loadSkills } from '@sherpa/core-skills';
+import { withTelemetry } from '../telemetry.js';
 
 export interface SearchCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -16,6 +17,12 @@ export interface SearchCommandOptions extends LoggerOptions {
 }
 
 export async function runSearch(opts: SearchCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, 'search', async () => {
+    return await _runSearch(opts);
+  });
+}
+
+async function _runSearch(opts: SearchCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('search', opts);
   const config = loadSherpaConfig(opts.projectRoot);
   const dbPath = pathFromRoot(opts.projectRoot, config.memory.databasePath);
@@ -47,7 +54,7 @@ export async function runSearch(opts: SearchCommandOptions): Promise<void> {
     if (opts.json) {
       const skillSummaries = matchedSkills.map((s) => ({ name: s.name, description: s.description, triggers: s.triggers }));
       process.stdout.write(`${JSON.stringify({ hits, skills: skillSummaries })}\n`);
-      return;
+      return { hitCount: hits.length, mode: opts.mode ?? 'hybrid', skillsMatched: matchedSkills.length };
     }
 
     const rows = hits.map((h) => ({
@@ -79,6 +86,7 @@ export async function runSearch(opts: SearchCommandOptions): Promise<void> {
         process.stdout.write(`  ${skill.name} — ${skill.description}\n`);
       }
     }
+    return { hitCount: hits.length, mode: opts.mode ?? 'hybrid', skillsMatched: matchedSkills.length };
   } finally {
     memory.close();
   }

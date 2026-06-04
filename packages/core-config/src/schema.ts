@@ -58,6 +58,19 @@ export interface AuditConfigSection {
   readonly integrityChecksOnStartup: boolean;
 }
 
+export interface TelemetryConfigSection {
+  /** Master switch — when false, no events are recorded or sent (default: false) */
+  readonly enabled: boolean;
+  /** Remote endpoint for batched event submission (PostHog-compatible) */
+  readonly endpoint: string;
+  /** PostHog project API key (public, identifies the project — not a secret) */
+  readonly apiKey: string;
+  /** Maximum events to buffer locally before attempting a flush */
+  readonly batchSize: number;
+  /** Interval in seconds between automatic flush attempts */
+  readonly flushIntervalSeconds: number;
+}
+
 export interface PrivacyConfigSection {
   readonly redactSecrets: boolean;
   readonly allowTelemetry: boolean;
@@ -82,6 +95,7 @@ export interface SherpaConfig {
   readonly embedding: EmbeddingConfigSection;
   readonly mcp: McpConfigSection;
   readonly audit: AuditConfigSection;
+  readonly telemetry: TelemetryConfigSection;
   readonly privacy: PrivacyConfigSection;
   readonly security: SecurityConfigSection;
 }
@@ -242,6 +256,27 @@ export function validateConfig(config: unknown): ValidationResult {
     }
   }
 
+  const telemetryRaw = config.telemetry;
+  if (!isRecord(telemetryRaw)) {
+    issues.push({ path: 'telemetry', message: 'must be an object' });
+  } else {
+    if (telemetryRaw.enabled !== undefined && !bool(telemetryRaw.enabled)) {
+      issues.push({ path: 'telemetry.enabled', message: 'must be boolean' });
+    }
+    if (telemetryRaw.endpoint !== undefined && !str(telemetryRaw.endpoint)) {
+      issues.push({ path: 'telemetry.endpoint', message: 'must be string' });
+    }
+    if (telemetryRaw.apiKey !== undefined && !str(telemetryRaw.apiKey)) {
+      issues.push({ path: 'telemetry.apiKey', message: 'must be string' });
+    }
+    if (telemetryRaw.batchSize !== undefined && !num(telemetryRaw.batchSize)) {
+      issues.push({ path: 'telemetry.batchSize', message: 'must be finite number' });
+    }
+    if (telemetryRaw.flushIntervalSeconds !== undefined && !num(telemetryRaw.flushIntervalSeconds)) {
+      issues.push({ path: 'telemetry.flushIntervalSeconds', message: 'must be finite number' });
+    }
+  }
+
   const privacyRaw = config.privacy;
   if (!isRecord(privacyRaw)) {
     issues.push({ path: 'privacy', message: 'must be an object' });
@@ -293,6 +328,7 @@ export function validatePartialStructure(parsed: unknown): ValidationResult {
   sectionMustBeObject('embedding');
   sectionMustBeObject('mcp');
   sectionMustBeObject('audit');
+  sectionMustBeObject('telemetry');
   sectionMustBeObject('privacy');
   sectionMustBeObject('security');
 
@@ -335,6 +371,7 @@ export function mergeWithDefaults(partial: unknown): SherpaConfig {
   const ollamaIn = isRecord(embeddingIn.ollama) ? embeddingIn.ollama : {};
   const mcpIn = isRecord(partial.mcp) ? partial.mcp : {};
   const auditIn = isRecord(partial.audit) ? partial.audit : {};
+  const telemetryIn = isRecord(partial.telemetry) ? partial.telemetry : {};
   const privacyIn = isRecord(partial.privacy) ? partial.privacy : {};
   const securityIn = isRecord(partial.security) ? partial.security : {};
 
@@ -385,6 +422,13 @@ export function mergeWithDefaults(partial: unknown): SherpaConfig {
       integrityChecksOnStartup: bool(auditIn.integrityChecksOnStartup)
         ? auditIn.integrityChecksOnStartup
         : defaults.audit.integrityChecksOnStartup,
+    },
+    telemetry: {
+      enabled: bool(telemetryIn.enabled) ? telemetryIn.enabled : defaults.telemetry.enabled,
+      endpoint: str(telemetryIn.endpoint) ? telemetryIn.endpoint : defaults.telemetry.endpoint,
+      apiKey: str(telemetryIn.apiKey) ? telemetryIn.apiKey : defaults.telemetry.apiKey,
+      batchSize: num(telemetryIn.batchSize) ? telemetryIn.batchSize : defaults.telemetry.batchSize,
+      flushIntervalSeconds: num(telemetryIn.flushIntervalSeconds) ? telemetryIn.flushIntervalSeconds : defaults.telemetry.flushIntervalSeconds,
     },
     privacy: {
       redactSecrets: bool(privacyIn.redactSecrets) ? privacyIn.redactSecrets : defaults.privacy.redactSecrets,

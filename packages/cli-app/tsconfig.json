@@ -14,6 +14,8 @@
     { "path": "../core-migration" },
     { "path": "../core-search" },
     { "path": "../core-skills" },
+    { "path": "../core-telemetry" },
+    { "path": "../infra-sqlite" },
     { "path": "../mcp-server" }
   ]
 }

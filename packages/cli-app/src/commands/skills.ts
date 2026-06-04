@@ -3,6 +3,7 @@ import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir } from '@sherpa/core-config';
 import { getSkill, importSkill, listSkills } from '@sherpa/core-skills';
+import { withTelemetry } from '../telemetry.js';
 
 export interface SkillsCommandOptions extends LoggerOptions {
   projectRoot: string;
@@ -12,6 +13,12 @@ export interface SkillsCommandOptions extends LoggerOptions {
 }
 
 export async function runSkills(opts: SkillsCommandOptions): Promise<void> {
+  await withTelemetry(opts.projectRoot, `skills.${opts.action}`, async () => {
+    return await _runSkills(opts);
+  });
+}
+
+async function _runSkills(opts: SkillsCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('skills', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
 
@@ -19,13 +26,13 @@ export async function runSkills(opts: SkillsCommandOptions): Promise<void> {
     const rows = listSkills(sherpaDir);
     if (opts.json) {
       process.stdout.write(`${JSON.stringify({ skills: rows })}\n`);
-      return;
+      return { action: 'list', skillCount: rows.length };
     }
     for (const row of rows) {
       process.stdout.write(`${row.name}@${row.version} — ${row.description}\n`);
     }
     logger.debug('skills.list', `count:${rows.length}`);
-    return;
+    return { action: 'list', skillCount: rows.length };
   }
 
   if (opts.action === 'show') {
@@ -40,10 +47,10 @@ export async function runSkills(opts: SkillsCommandOptions): Promise<void> {
     }
     if (opts.json) {
       process.stdout.write(`${JSON.stringify({ skill })}\n`);
-      return;
+      return { action: 'show' };
     }
     process.stdout.write(`${skill.name} (${skill.version})\n${skill.instructions}\n`);
-    return;
+    return { action: 'show' };
   }
 
   if (opts.action === 'import') {
@@ -57,5 +64,8 @@ export async function runSkills(opts: SkillsCommandOptions): Promise<void> {
     if (!opts.json) {
       process.stdout.write(`Imported skill from ${resolved}\n`);
     }
+    return { action: 'import' };
   }
+
+  return { action: opts.action };
 }
