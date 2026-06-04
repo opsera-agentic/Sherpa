@@ -10,12 +10,9 @@ export interface ToolContext {
 }
 
 export async function handleMemoryRead(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown> {
-  ctx.audit.log({
-    operation: 'memory_read',
-    resource_type: 'memory.entry',
-    resource_id: String(args.id ?? ''),
-    details: { transport: 'mcp' },
-  });
+  // Authenticate and validate BEFORE auditing. Auditing first would let an
+  // unauthenticated caller write attacker-controlled rows into the
+  // integrity-checked audit chain just by sending a request.
   const token = String(args.sessionToken ?? '');
   if (token !== ctx.sessionToken) {
     throw new Error('Invalid session token');
@@ -24,6 +21,12 @@ export async function handleMemoryRead(args: Record<string, unknown>, ctx: ToolC
   if (!id) {
     throw new Error('memory_read requires id');
   }
+  ctx.audit.log({
+    operation: 'memory_read',
+    resource_type: 'memory.entry',
+    resource_id: id,
+    details: { transport: 'mcp' },
+  });
   const entry = ctx.memory.getEntry(id);
   if (!entry) {
     return { found: false };
@@ -32,18 +35,14 @@ export async function handleMemoryRead(args: Record<string, unknown>, ctx: ToolC
 }
 
 export async function handleMemoryWrite(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown> {
-  ctx.audit.log({
-    operation: 'memory_write',
-    resource_type: 'memory.entry',
-    resource_id: String(args.id ?? 'new'),
-    details: { title: args.title },
-  });
-  if (!ctx.allowWrite) {
-    throw new Error('memory_write disabled (restart server with --allow-write)');
-  }
+  // Authenticate, then authorize, then validate — all before auditing or
+  // mutating. Auditing only happens for an accepted, completed write.
   const token = String(args.sessionToken ?? '');
   if (token !== ctx.sessionToken) {
     throw new Error('Invalid session token');
+  }
+  if (!ctx.allowWrite) {
+    throw new Error('memory_write disabled (restart server with --allow-write)');
   }
   const title = String(args.title ?? '');
   const body = String(args.content ?? '');
@@ -63,16 +62,17 @@ export async function handleMemoryWrite(args: Record<string, unknown>, ctx: Tool
     tags,
     classification,
   });
+  ctx.audit.log({
+    operation: 'memory_write',
+    resource_type: 'memory.entry',
+    resource_id: id,
+    details: { title },
+  });
   return { id };
 }
 
 export async function handleMemorySearch(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown> {
-  ctx.audit.log({
-    operation: 'memory_search',
-    resource_type: 'memory.index',
-    resource_id: 'fts',
-    details: { query: args.query },
-  });
+  // Authenticate and validate before auditing the (attacker-controlled) query.
   const token = String(args.sessionToken ?? '');
   if (token !== ctx.sessionToken) {
     throw new Error('Invalid session token');
@@ -81,6 +81,12 @@ export async function handleMemorySearch(args: Record<string, unknown>, ctx: Too
   if (!query) {
     throw new Error('memory_search requires query');
   }
+  ctx.audit.log({
+    operation: 'memory_search',
+    resource_type: 'memory.index',
+    resource_id: 'fts',
+    details: { query },
+  });
   const limit = args.limit !== undefined ? Number(args.limit) : 10;
   const mode = (args.mode as 'hybrid' | 'bm25' | 'vector' | undefined) ?? 'hybrid';
   const types = Array.isArray(args.types) ? args.types.map(String) : undefined;

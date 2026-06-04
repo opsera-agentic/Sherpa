@@ -40,6 +40,41 @@ describe('mcp-server tools', () => {
     memory.close();
   });
 
+  it('does not audit unauthenticated or denied calls', async () => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-mcp-audit-'));
+    const sherpaDir = path.join(tmp, '.sherpa');
+    fs.mkdirSync(sherpaDir, { recursive: true });
+    const memory = new MemoryRepository(path.join(sherpaDir, 'memory.db'));
+    const audit = new AuditService(memory.getDatabase(), tmp);
+    const db = memory.getDatabase();
+    const auditCount = () =>
+      (db.prepare('SELECT COUNT(*) AS c FROM AUDIT_EVENTS').get() as { c: number }).c;
+
+    const ctx: ToolContext = { memory, audit, sessionToken: 'good', allowWrite: true };
+
+    // Bad token on every tool → reject, and crucially write nothing to the
+    // integrity-checked audit chain.
+    await expect(handleMemoryRead({ sessionToken: 'bad', id: 'x' }, ctx)).rejects.toThrow(/session token/);
+    await expect(handleMemorySearch({ sessionToken: 'bad', query: 'q' }, ctx)).rejects.toThrow(/session token/);
+    await expect(
+      handleMemoryWrite({ sessionToken: 'bad', title: 'evil', content: 'c' }, ctx),
+    ).rejects.toThrow(/session token/);
+    expect(auditCount()).toBe(0);
+
+    // Authenticated but write disabled → reject, still no audit row.
+    const roCtx: ToolContext = { memory, audit, sessionToken: 'good', allowWrite: false };
+    await expect(
+      handleMemoryWrite({ sessionToken: 'good', title: 'x', content: 'y' }, roCtx),
+    ).rejects.toThrow(/allow-write/);
+    expect(auditCount()).toBe(0);
+
+    // A valid write IS audited.
+    await handleMemoryWrite({ sessionToken: 'good', title: 'ok', content: 'body' }, ctx);
+    expect(auditCount()).toBe(1);
+
+    memory.close();
+  });
+
   it('allows reads searches and writes when configured', async () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-mcp-write-'));
     const sherpaDir = path.join(tmp, '.sherpa');
