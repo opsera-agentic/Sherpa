@@ -112,7 +112,7 @@ describe('MemoryRepository', () => {
     memory.close();
   });
 
-  it('reindexes derived chunks', () => {
+  it('reindexes derived chunks', async () => {
     const memory = bootstrap();
 
     memory.upsertEntry({
@@ -124,9 +124,48 @@ describe('MemoryRepository', () => {
       classification: 'public',
     });
 
-    const stats = memory.reindexAll();
+    const stats = await memory.reindexAll();
     expect(stats.entries).toBeGreaterThan(0);
     expect(stats.chunks).toBeGreaterThan(0);
+
+    memory.close();
+  });
+
+  it('persists chunk embeddings when an embedder is supplied', async () => {
+    const memory = bootstrap();
+    const db = memory.getDatabase();
+
+    memory.upsertEntry({
+      workspace_id: 'default',
+      type: 'note',
+      title: 'Doc',
+      body: 'Alpha section here\n\nBeta section there',
+      tags: [],
+      classification: 'public',
+    });
+
+    const nullBefore = (
+      db.prepare('SELECT COUNT(*) AS c FROM MEMORY_CHUNKS WHERE embedding IS NOT NULL').get() as { c: number }
+    ).c;
+    expect(nullBefore).toBe(0);
+
+    // A trivial 3-dim embedder; the contract allows sync or async embedBatch.
+    const embedder = {
+      embedBatch: (texts: string[]) => texts.map((_, i) => [i + 1, 0, 0]),
+    };
+    const stats = await memory.reindexAll(embedder);
+    expect(stats.chunks).toBe(2);
+
+    const withEmbedding = (
+      db.prepare('SELECT COUNT(*) AS c FROM MEMORY_CHUNKS WHERE embedding IS NOT NULL').get() as { c: number }
+    ).c;
+    expect(withEmbedding).toBe(2);
+
+    // Stored as a 3-float (12-byte) blob.
+    const row = db
+      .prepare('SELECT LENGTH(embedding) AS len FROM MEMORY_CHUNKS WHERE embedding IS NOT NULL LIMIT 1')
+      .get() as { len: number };
+    expect(row.len).toBe(12);
 
     memory.close();
   });

@@ -8,6 +8,7 @@ import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-
 import { loadSkills } from '@sherpa/core-skills';
 import { AuditService } from '@sherpa/core-audit';
 import { parseFile } from '@sherpa/infra-parser';
+import { createEmbeddingProvider, type EmbeddingProvider } from '@sherpa/infra-embedding';
 import { withTelemetry } from '../telemetry.js';
 
 export interface SyncCommandOptions extends LoggerOptions {
@@ -230,7 +231,38 @@ async function _runSync(opts: SyncCommandOptions): Promise<Record<string, unknow
     adaptersRegenerated += 1;
   }
 
-  const indexStats = memory.reindexAll();
+  // Compute and persist chunk embeddings only when the search provider
+  // actually uses vectors. For the default bm25 provider this stays a pure
+  // keyword index (no wasted embedding work, no surprise network calls).
+  const wantsVectors = config.search.provider === 'hybrid' || config.search.provider === 'vector';
+  let embedder: EmbeddingProvider | undefined;
+  if (wantsVectors) {
+    try {
+      embedder = createEmbeddingProvider({
+        provider: config.embedding.provider as 'tfidf' | 'openai' | 'ollama',
+        dimensions: config.embedding.dimensions,
+        openai: config.embedding.openai,
+        ollama: config.embedding.ollama,
+      });
+    } catch (err) {
+      logger.warn(
+        'sync.embedding',
+        `Vector search is configured but the embedding provider is unavailable (${String(err)}); indexing without embeddings`,
+      );
+    }
+  }
+
+  let indexStats: { entries: number; chunks: number };
+  try {
+    indexStats = await memory.reindexAll(embedder);
+  } catch (err) {
+    if (embedder) {
+      logger.warn('sync.embedding', `Embedding failed (${String(err)}); reindexing without vectors`);
+      indexStats = await memory.reindexAll();
+    } else {
+      throw err;
+    }
+  }
 
   logger.info('sync.summary', 'Sherpa workspace synchronized', {
     entriesUpdated,
