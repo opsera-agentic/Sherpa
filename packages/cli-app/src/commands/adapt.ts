@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
-import { getSherpaDir } from '@sherpa/core-config';
+import { getSherpaDir, loadSherpaConfig } from '@sherpa/core-config';
 import { createDefaultAdapterRegistry, type AdapterContext } from '@sherpa/core-adapters';
 import { loadSkills } from '@sherpa/core-skills';
 import { withTelemetry } from '../telemetry.js';
@@ -31,8 +31,25 @@ export async function runAdapt(opts: AdaptCommandOptions): Promise<void> {
 async function _runAdapt(opts: AdaptCommandOptions): Promise<Record<string, unknown>> {
   const logger = createLogger('adapt', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
+  const config = loadSherpaConfig(opts.projectRoot);
   const registry = createDefaultAdapterRegistry();
-  const names = opts.agent ? [opts.agent] : registry.names();
+
+  // Honor config.adapters.disabled, matching `sherpa sync`. A bulk `adapt`
+  // skips disabled adapters; an explicit `--agent X` is an explicit override
+  // (generate it, but warn so the contradiction is visible).
+  const disabled = new Set(config.adapters.disabled);
+  let names: string[];
+  if (opts.agent) {
+    names = [opts.agent];
+    if (disabled.has(opts.agent)) {
+      logger.warn(
+        'adapt.disabled',
+        `Adapter ${opts.agent} is disabled in config but was explicitly requested — generating anyway`,
+      );
+    }
+  } else {
+    names = registry.names().filter((n) => !disabled.has(n));
+  }
 
   const conventionsPath = path.join(sherpaDir, 'conventions.md');
   const decisions = readDecisions(path.join(sherpaDir, 'decisions'));
@@ -92,6 +109,7 @@ async function _runAdapt(opts: AdaptCommandOptions): Promise<Record<string, unkn
   return {
     adaptersGenerated: report.length,
     agents: names,
+    disabledAdapters: [...disabled],
     validCount: report.filter((r) => r.valid).length,
     warningCount: report.reduce((sum, r) => sum + r.warnings.length, 0),
   };
