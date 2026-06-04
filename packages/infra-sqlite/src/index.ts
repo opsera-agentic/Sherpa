@@ -24,6 +24,16 @@ export function initDatabase(dbPath: string): BetterSqlite.Database {
   const db = new BetterSqlite(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  // Performance pragmas for the write-then-search workload:
+  //  - synchronous=NORMAL is durable under WAL and much faster than FULL
+  //  - busy_timeout avoids SQLITE_BUSY when the CLI and the MCP server (or
+  //    two commands) touch the same WAL database concurrently
+  //  - a larger negative cache_size (KB) and in-memory temp store speed up
+  //    FTS/aggregate queries that spill scratch data
+  db.pragma('synchronous = NORMAL');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('cache_size = -16000');
+  db.pragma('temp_store = MEMORY');
   new MigrationRunner(db).run();
   return db;
 }
