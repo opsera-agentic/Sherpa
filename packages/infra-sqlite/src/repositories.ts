@@ -106,7 +106,9 @@ export class MemoryChunkRepository {
 
   /** BM25-ranked FTS5 rows joined back to live entries for filtering and snippets. */
   searchFts(ftsQuery: string, filterClause: string, params: Record<string, unknown>, limit: number, offset: number) {
-    const escapedMatch = ftsQuery.replace(/'/g, "''");
+    // Bind the MATCH expression instead of interpolating it. This keeps the
+    // SQL text constant so better-sqlite3 reuses one prepared statement across
+    // queries, and removes the fragile manual single-quote escaping.
     const sql = `
       SELECT
         e.id AS id,
@@ -118,13 +120,14 @@ export class MemoryChunkRepository {
         bm25(memory_chunks_fts) AS bm25_score
       FROM memory_chunks_fts
       INNER JOIN MEMORY_ENTRIES AS e ON e.id = memory_chunks_fts.entry_id
-      WHERE memory_chunks_fts MATCH '${escapedMatch}'
+      WHERE memory_chunks_fts MATCH @ftsMatch
         AND (${filterClause})
       ORDER BY bm25_score ASC
       LIMIT @limit OFFSET @offset
     `;
     return this.db.prepare(sql).all({
       ...params,
+      ftsMatch: ftsQuery,
       limit,
       offset,
     }) as Array<{

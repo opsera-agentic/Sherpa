@@ -90,6 +90,26 @@ describe('SearchService', () => {
     memory.close();
   });
 
+  it('handles queries containing single quotes via the bound MATCH param', () => {
+    const { memory, search } = bootstrap();
+
+    memory.upsertEntry({
+      workspace_id: 'default',
+      type: 'doc',
+      title: "O'Reilly handbook",
+      body: "The team's ownership model is documented here.",
+      tags: [],
+      classification: 'public',
+    });
+
+    // An apostrophe in the query must not break the SQL or throw — the MATCH
+    // expression is bound, not interpolated.
+    expect(() => search.searchBM25("team's ownership")).not.toThrow();
+    expect(search.searchBM25('ownership').length).toBeGreaterThan(0);
+
+    memory.close();
+  });
+
   it('runs filtered queries via search()', async () => {
     const { memory, search } = bootstrap();
 
