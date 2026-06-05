@@ -15,6 +15,7 @@ import { Command, CommanderError, Option } from 'commander';
 import { runAdapt } from './commands/adapt.js';
 import { runArchive } from './commands/archive.js';
 import { runInit } from './commands/init.js';
+import { runInspect } from './commands/inspect.js';
 import { runMigrate } from './commands/migrate.js';
 import { runPull } from './commands/pull.js';
 import { runSearch } from './commands/search.js';
@@ -233,6 +234,22 @@ export function createSherpaProgram(): Command {
     .action(async (_opts, cmd) => {
       const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
       await runStatus({
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  program
+    .command('inspect')
+    .description('Inspect Sherpa sources and generated agent files')
+    .option('--agent <name>', 'Inspect a single adapter')
+    .option('--sources', 'Show only Sherpa source metrics')
+    .action(async (opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runInspect({
+        agent: opts.agent,
+        sources: Boolean(opts.sources),
         projectRoot: resolveRoot(g),
         verbose: Boolean(g.verbose),
         json: Boolean(g.json),

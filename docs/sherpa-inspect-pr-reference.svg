@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="1040" viewBox="0 0 1160 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Sherpa inspect command output</title>
+  <desc id="desc">Screenshot-style terminal output for sherpa inspect --agent claude-code.</desc>
+  <rect width="1160" height="1040" fill="#0d1117"/>
+  <rect x="32" y="32" width="1096" height="976" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <circle cx="62" cy="62" r="8" fill="#ff5f57"/>
+  <circle cx="88" cy="62" r="8" fill="#ffbd2e"/>
+  <circle cx="114" cy="62" r="8" fill="#28c840"/>
+  <text x="144" y="68" fill="#8b949e" font-family="Menlo, Consolas, monospace" font-size="17">Sherpa CLI</text>
+  <text x="58" y="116" fill="#c9d1d9" font-family="Menlo, Consolas, monospace" font-size="20" xml:space="preserve">
+<tspan x="58" dy="0">$ sherpa inspect --agent claude-code</tspan>
+<tspan x="58" dy="36"></tspan>
+<tspan x="58" dy="36">Sherpa Inspect</tspan>
+<tspan x="58" dy="36"></tspan>
+<tspan x="58" dy="36">Sources:</tspan>
+<tspan x="58" dy="30">- conventions.md</tspan>
+<tspan x="58" dy="30">  status: present</tspan>
+<tspan x="58" dy="30">  lines: 19</tspan>
+<tspan x="58" dy="30">  estimated_tokens: 173</tspan>
+<tspan x="58" dy="30">  size: 692 B</tspan>
+<tspan x="58" dy="30">  updated: 2026-06-05T22:30:32.894Z</tspan>
+<tspan x="58" dy="30">  secrets_detected: no</tspan>
+<tspan x="58" dy="30">- decisions/</tspan>
+<tspan x="58" dy="30">  files: 0</tspan>
+<tspan x="58" dy="30">  lines: 0</tspan>
+<tspan x="58" dy="30">  estimated_tokens: 0</tspan>
+<tspan x="58" dy="30">  size: 0 B</tspan>
+<tspan x="58" dy="30">  updated: n/a</tspan>
+<tspan x="58" dy="30">  secrets_detected: no</tspan>
+<tspan x="58" dy="30">- skills/</tspan>
+<tspan x="58" dy="30">  skills: 2</tspan>
+<tspan x="58" dy="30">  lines: 47</tspan>
+<tspan x="58" dy="30">  estimated_tokens: 236</tspan>
+<tspan x="58" dy="30">  size: 942 B</tspan>
+<tspan x="58" dy="30">  updated: 2026-06-05T22:30:32.894Z</tspan>
+<tspan x="58" dy="30">  secrets_detected: no</tspan>
+<tspan x="58" dy="30">  skill_names: shared-ci-cache, workspace-boundaries</tspan>
+<tspan x="58" dy="36"></tspan>
+<tspan x="58" dy="36">Generated Files:</tspan>
+<tspan x="58" dy="30">- claude-code</tspan>
+<tspan x="58" dy="30">  file: CLAUDE.md</tspan>
+<tspan x="58" dy="30">  status: missing</tspan>
+<tspan x="58" dy="30">  size: n/a</tspan>
+<tspan x="58" dy="30">  lines: n/a</tspan>
+<tspan x="58" dy="30">  estimated_tokens: n/a</tspan>
+<tspan x="58" dy="30">  valid: yes</tspan>
+<tspan x="58" dy="30">  generated_by_sherpa: no</tspan>
+<tspan x="58" dy="30">  stale: no</tspan>
+<tspan x="58" dy="30">  manual_edits_detected: no</tspan>
+<tspan x="58" dy="30">  snapshot_exists: no</tspan>
+<tspan x="58" dy="30">  source_coverage:</tspan>
+<tspan x="58" dy="30">    conventions: yes</tspan>
+<tspan x="58" dy="30">    decisions: 0/0</tspan>
+  </text>
+</svg>
