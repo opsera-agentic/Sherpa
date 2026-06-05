@@ -109,6 +109,21 @@ describe('Sherpa CLI E2E', () => {
     });
   });
 
+  describe('Flow 2b — diff before adapt', () => {
+    it('reports pending changes then clean state after adapt', async () => {
+      const root = tempProject();
+      await createSherpaProgram().parseAsync(sherpaArgv(root, ['init']), { from: 'user' });
+
+      const pending = await runSherpaCaptureStdout(root, ['diff', '--stat']);
+      expect(pending).toContain('Pending changes');
+
+      await createSherpaProgram().parseAsync(sherpaArgv(root, ['adapt']), { from: 'user' });
+
+      const clean = await runSherpaCaptureStdout(root, ['diff', '--stat']);
+      expect(clean).toContain('No pending adapter changes');
+    });
+  });
+
   describe('Flow 3 — search', () => {
     it('BM25 via CLI finds seeded chunks and paging via SearchService is stable', async () => {
       const root = tempProject();
