@@ -40,11 +40,13 @@ export interface TelemetryEvent {
 /**
  * Telemetry configuration managed via sherpa.config.yaml.
  *
- * Telemetry is enabled by default. On first run, a notice is printed
- * informing the user how to opt out.
+ * Telemetry is opt-in: disabled by default. On first run a notice points
+ * the user at `sherpa telemetry enable` if they wish to turn it on. Note
+ * that collection also requires privacy.allowTelemetry — see
+ * isTelemetryAllowed in the CLI.
  */
 export interface TelemetryConfig {
-  /** Master switch — when false, no events are recorded or sent (default: false) */
+  /** Operational toggle — when false, no events are recorded or sent (default: false) */
   readonly enabled: boolean;
   /** Remote endpoint for batched event submission (PostHog-compatible) */
   readonly endpoint: string;

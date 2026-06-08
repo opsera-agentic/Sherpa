@@ -5,7 +5,15 @@ import type { EmbeddingProvider } from '@sherpa/infra-embedding';
 import type { SearchFilters, SearchResult } from './types.js';
 
 function blobToFloat32(blob: Buffer): Float32Array {
-  return new Float32Array(blob.buffer, blob.byteOffset, blob.byteLength / 4);
+  // SQLite blobs come back as Buffers that are slices of a shared pool, so
+  // their byteOffset is arbitrary. Float32Array requires a 4-byte-aligned
+  // offset, so viewing the Buffer directly throws RangeError for many rows.
+  // Copy the bytes into a freshly allocated (aligned) Float32Array instead,
+  // and ignore any trailing bytes that don't form a complete float.
+  const usableBytes = blob.byteLength - (blob.byteLength % 4);
+  const out = new Float32Array(usableBytes / 4);
+  Buffer.from(out.buffer, out.byteOffset, usableBytes).set(blob.subarray(0, usableBytes));
+  return out;
 }
 
 function cosineSimilarityInline(a: Float32Array, b: Float32Array): number {

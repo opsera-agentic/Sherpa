@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import type { LoggerOptions } from '../logger.js';
 import { createLogger } from '../logger.js';
 import { getSherpaDir, getSherpaConfigPath, loadSherpaConfig } from '@sherpa/core-config';
@@ -30,9 +29,13 @@ export async function runTelemetry(opts: TelemetryCommandOptions): Promise<void>
   if (opts.action === 'status') {
     const config = loadSherpaConfig(opts.projectRoot);
     const anonymousId = generateAnonymousId();
+    // Collection requires BOTH the operational toggle and the privacy switch.
+    const effective = config.telemetry.enabled && config.privacy.allowTelemetry;
 
     const payload = {
-      enabled: config.telemetry.enabled,
+      enabled: effective,
+      telemetryEnabled: config.telemetry.enabled,
+      allowTelemetry: config.privacy.allowTelemetry,
       anonymousId,
       endpoint: config.telemetry.endpoint,
       batchSize: config.telemetry.batchSize,
@@ -45,7 +48,7 @@ export async function runTelemetry(opts: TelemetryCommandOptions): Promise<void>
     }
 
     process.stdout.write('\n');
-    process.stdout.write(`  Telemetry:     ${config.telemetry.enabled ? 'ENABLED' : 'DISABLED'}\n`);
+    process.stdout.write(`  Telemetry:     ${effective ? 'ENABLED' : 'DISABLED'}\n`);
     process.stdout.write(`  Anonymous ID:  ${anonymousId}\n`);
     process.stdout.write(`  Endpoint:      ${config.telemetry.endpoint || '(none)'}\n`);
     process.stdout.write(`  Batch size:    ${config.telemetry.batchSize}\n`);
@@ -74,14 +77,22 @@ export async function runTelemetry(opts: TelemetryCommandOptions): Promise<void>
     rawConfig = (yaml.load(content) as Record<string, unknown>) ?? {};
   }
 
+  // Keep both switches in lockstep so they can never contradict each other:
+  // enabling sets the operational toggle AND grants the privacy allowance;
+  // disabling clears the operational toggle.
+  const enable = opts.action === 'enable';
   const telemetrySection = (rawConfig.telemetry as Record<string, unknown>) ?? {};
-  telemetrySection.enabled = opts.action === 'enable';
+  telemetrySection.enabled = enable;
   rawConfig.telemetry = telemetrySection;
+
+  const privacySection = (rawConfig.privacy as Record<string, unknown>) ?? {};
+  privacySection.allowTelemetry = enable;
+  rawConfig.privacy = privacySection;
 
   fs.writeFileSync(configPath, yaml.dump(rawConfig, { lineWidth: 120, noRefs: true }), 'utf8');
 
   if (opts.json) {
-    process.stdout.write(`${JSON.stringify({ enabled: telemetrySection.enabled })}\n`);
+    process.stdout.write(`${JSON.stringify({ enabled: enable })}\n`);
   } else {
     const state = opts.action === 'enable' ? 'enabled' : 'disabled';
     process.stdout.write(`Telemetry ${state}. Run \`sherpa telemetry status\` to see details.\n`);

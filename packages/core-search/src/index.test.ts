@@ -90,6 +90,26 @@ describe('SearchService', () => {
     memory.close();
   });
 
+  it('handles queries containing single quotes via the bound MATCH param', () => {
+    const { memory, search } = bootstrap();
+
+    memory.upsertEntry({
+      workspace_id: 'default',
+      type: 'doc',
+      title: "O'Reilly handbook",
+      body: "The team's ownership model is documented here.",
+      tags: [],
+      classification: 'public',
+    });
+
+    // An apostrophe in the query must not break the SQL or throw — the MATCH
+    // expression is bound, not interpolated.
+    expect(() => search.searchBM25("team's ownership")).not.toThrow();
+    expect(search.searchBM25('ownership').length).toBeGreaterThan(0);
+
+    memory.close();
+  });
+
   it('runs filtered queries via search()', async () => {
     const { memory, search } = bootstrap();
 
@@ -146,6 +166,38 @@ describe('SearchService', () => {
     const hits = await search.searchVector('alpha keyword');
 
     expect(hits[0]?.id).toBe(firstId);
+
+    memory.close();
+  });
+
+  it('vector search works on embeddings persisted through reindexAll', async () => {
+    const { db, memory } = bootstrap();
+
+    const provider = embeddingStub((text: string) => (text.includes('alpha') ? [1, 0, 0] : [0, 1, 0]));
+    const search = new SearchService(db, provider);
+
+    const alphaId = memory.upsertEntry({
+      workspace_id: 'default',
+      type: 'fact',
+      title: 'Alpha lane',
+      body: 'mentions alpha keyword',
+      tags: [],
+      classification: 'public',
+    });
+    memory.upsertEntry({
+      workspace_id: 'default',
+      type: 'fact',
+      title: 'Beta lane',
+      body: 'mentions beta keyword',
+      tags: [],
+      classification: 'public',
+    });
+
+    // Persist embeddings via the real indexing path (no manual seedEmbedding).
+    await memory.reindexAll(provider);
+
+    const hits = await search.searchVector('alpha keyword');
+    expect(hits[0]?.id).toBe(alphaId);
 
     memory.close();
   });

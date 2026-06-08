@@ -15,6 +15,7 @@
     { "path": "../core-search" },
     { "path": "../core-skills" },
     { "path": "../core-telemetry" },
+    { "path": "../infra-embedding" },
     { "path": "../infra-sqlite" },
     { "path": "../mcp-server" }
   ]

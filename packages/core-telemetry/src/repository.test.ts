@@ -61,6 +61,31 @@ describe.skipIf(!hasSqlite)('TelemetryRepository (SQLite)', () => {
     expect(unflushed[0]!.metadata).toEqual({ entriesUpdated: 5 });
   });
 
+  it('persists events even when optional fields are omitted', async () => {
+    // Regression: INSERT OR IGNORE used to silently drop rows whose NOT NULL
+    // columns received undefined (bound as NULL). insert() must coalesce to
+    // schema defaults so a partially populated event is never lost.
+    const db = await createTestDb();
+    const { TelemetryRepository } = await import('./telemetry-repository.js');
+    const repo = new TelemetryRepository(db);
+
+    repo.insert({
+      id: 'evt-partial', anonymous_id: 'abc', command: 'status', success: true,
+      duration_ms: 12, cli_version: '0.1.0', node_version: 'v22',
+      os_platform: 'darwin', os_arch: 'arm64',
+      metadata: { foo: 1 }, created_at: Date.now(),
+      // os_version, ide, install_source, timezone intentionally omitted
+    } as unknown as Parameters<typeof repo.insert>[0]);
+
+    expect(repo.count()).toBe(1);
+    const [row] = repo.getUnflushed(10);
+    expect(row!.command).toBe('status');
+    expect(row!.ide).toBe('terminal');
+    expect(row!.install_source).toBe('unknown');
+    expect(row!.timezone).toBe('unknown');
+    expect(row!.os_version).toBe('');
+  });
+
   it('marks events as flushed', async () => {
     const db = await createTestDb();
     const { TelemetryRepository } = await import('./telemetry-repository.js');

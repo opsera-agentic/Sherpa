@@ -23,6 +23,31 @@ export function sha256Hex(content: string): string {
   return createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
+/**
+ * Minimal structural contract for an embedding backend.
+ *
+ * Deliberately narrower than (but compatible with) infra-embedding's
+ * EmbeddingProvider so core-memory does not need to depend on that package.
+ * embedBatch may be synchronous (tf-idf) or async (OpenAI/Ollama).
+ */
+export interface ChunkEmbedder {
+  embedBatch(texts: string[]): number[][] | Promise<number[][]>;
+}
+
+/** Splits an entry body into chunk texts on blank lines. */
+function splitIntoChunks(body: string): string[] {
+  return body
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+/** Packs a dense vector into a Float32 blob for storage in MEMORY_CHUNKS. */
+function floatsToBlob(vec: number[]): Buffer {
+  const f32 = new Float32Array(vec);
+  return Buffer.from(f32.buffer, f32.byteOffset, f32.byteLength);
+}
+
 /** SQLite-backed memory facade layered on `@sherpa/infra-sqlite` repositories. */
 export class MemoryRepository {
   private readonly db: SqliteDatabase;
@@ -78,7 +103,7 @@ export class MemoryRepository {
 
   private rebuildChunks(entryId: string, body: string): number {
     this.chunks.deleteByEntryId(entryId);
-    const parts = body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    const parts = splitIntoChunks(body);
     const now = Date.now();
     parts.forEach((content, index) => {
       const chunk: MemoryChunkRecord = {
@@ -95,13 +120,50 @@ export class MemoryRepository {
     return parts.length;
   }
 
-  /** Rebuilds MEMORY_CHUNKS rows for every entry after bulk imports. */
-  reindexAll(): { entries: number; chunks: number } {
+  /**
+   * Rebuilds MEMORY_CHUNKS rows for every entry after bulk imports.
+   *
+   * When an embedder is supplied, every chunk is embedded and the vector is
+   * persisted alongside it — this is what makes vector/hybrid search actually
+   * work (without it, chunk embeddings are always null and the vector half of
+   * the engine is dead code). The whole corpus is embedded in a single
+   * embedBatch call so tf-idf style embedders see a consistent document
+   * frequency across all chunks, and so remote providers can batch.
+   *
+   * Embedding happens before the synchronous write transaction because
+   * better-sqlite3 transactions cannot await; the (possibly async) vectors are
+   * computed first, then inserted atomically.
+   */
+  async reindexAll(embedder?: ChunkEmbedder): Promise<{ entries: number; chunks: number }> {
     const rows = this.db.prepare(`SELECT id, body FROM MEMORY_ENTRIES`).all() as Array<{ id: string; body: string }>;
+    const perEntry = rows.map((row) => ({ entryId: row.id, parts: splitIntoChunks(row.body) }));
+    const flatParts = perEntry.flatMap((e) => e.parts);
+
+    let vectors: number[][] = [];
+    if (embedder && flatParts.length > 0) {
+      vectors = await embedder.embedBatch(flatParts);
+    }
+
+    const now = Date.now();
     let chunks = 0;
+    let cursor = 0;
     const txn = this.db.transaction(() => {
-      for (const row of rows) {
-        chunks += this.rebuildChunks(row.id, row.body);
+      for (const entry of perEntry) {
+        this.chunks.deleteByEntryId(entry.entryId);
+        entry.parts.forEach((content, index) => {
+          const vec = vectors[cursor++];
+          const embedding = vec && vec.length > 0 ? floatsToBlob(vec) : null;
+          this.chunks.insert({
+            id: randomUUID(),
+            entry_id: entry.entryId,
+            content,
+            chunk_index: index,
+            metadata: '{}',
+            embedding,
+            created_at: now,
+          });
+          chunks += 1;
+        });
       }
     });
     txn();
