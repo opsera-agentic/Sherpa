@@ -247,7 +247,7 @@ function inspectAgents(
 ): AgentInspectMetric[] {
   const registry = createDefaultAdapterRegistry();
   if (requestedAgent && !registry.get(requestedAgent)) {
-    throw new Error(`Unknown adapter ${requestedAgent}`);
+    throw new Error(`Unknown adapter "${requestedAgent}". Known adapters: ${registry.names().join(', ')}`);
   }
 
   const disabled = new Set(disabledAdapters);
