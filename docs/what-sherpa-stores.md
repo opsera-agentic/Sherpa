@@ -41,7 +41,7 @@ When embedding providers call HTTP endpoints:
 - Configuration references hosts (`embedding.openai.baseUrl`, `embedding.ollama.baseUrl`, …).
 - `security.requireTlsForRemoteProviders` defaults conservative; expand `allowedHosts` deliberately.
 
-Sherpa does **not** ship customer telemetry by default (`privacy.allowTelemetry` defaults off in generated configs).
+Sherpa does **not** collect telemetry by default. Both `telemetry.enabled` and `privacy.allowTelemetry` default to `false`. Collection only happens when the user explicitly runs `sherpa telemetry enable`. See [telemetry.md](telemetry.md) for full transparency on what is collected.
 
 ## Inspect locally
 
@@ -53,7 +53,15 @@ cat .sherpa/sherpa.config.yaml
 
 Replace paths if your config overrides `memory.databasePath`.
 
+## Telemetry events
+
+When telemetry is enabled (`sherpa telemetry enable`), anonymous usage events are stored in the same SQLite database in a `telemetry_events` table. Events contain only command names, durations, success/failure, OS/Node version, IDE environment, and install source. No file contents, paths, project names, or PII.
+
+Run `sherpa stats` to inspect what has been recorded locally.
+
 ## Related docs
 
 - [Getting started](getting-started.md)
+- [Configuration Reference](configuration.md)
+- [Telemetry](telemetry.md)
 - [Security policy](../SECURITY.md)

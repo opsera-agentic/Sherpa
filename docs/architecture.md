@@ -14,6 +14,7 @@ Sherpa separates **orchestration** (CLI), **policy-rich domains** (`core-*`), an
 | `@sherpa/core-adapters` | Transforms Sherpa context into agent-specific instruction payloads. |
 | `@sherpa/core-migration` | Imports legacy markdown sections into normalized memory. |
 | `@sherpa/core-audit` | Hash-chained audit events mirrored to JSONL. |
+| `@sherpa/core-telemetry` | Anonymous usage metrics, PostHog integration. |
 | `@sherpa/infra-sqlite` | Schema, repositories, migrations. |
 | `@sherpa/infra-parser` | Chunking + language-aware helpers. |
 | `@sherpa/infra-embedding` | Provider abstraction for vectors / TF-IDF bridges. |
@@ -76,7 +77,28 @@ Arrows imply compile-time imports; dashed semantics omitted for brevity.
 - **Adapters**: Register strategy implementations inside `@sherpa/core-adapters` respecting existing adapter interfaces.
 - **Embedding providers**: Implement infra interfaces rather than bolting vendor SDKs into CLI layers.
 
+## Performance
+
+SQLite is configured with WAL-friendly pragmas for the write-then-search workload:
+
+- `journal_mode=WAL` -- Concurrent reads during writes
+- `synchronous=NORMAL` -- Durable under WAL, faster than FULL
+- `busy_timeout=5000` -- Avoids SQLITE_BUSY when CLI and MCP server share the database
+- `cache_size=-16000` -- 16MB in-memory page cache for FTS/aggregate queries
+- `temp_store=MEMORY` -- Scratch data stays in RAM
+
+## Build system
+
+The monorepo uses TypeScript composite project references. A single `tsc -b` at the root builds all 13 packages in dependency order with incremental compilation.
+
+```bash
+npm run build    # tsc -b (solution mode, parallel where possible)
+npm test         # vitest
+npm run lint     # eslint
+```
+
 ## Related reading
 
+- [Configuration Reference](configuration.md)
 - [What Sherpa stores](what-sherpa-stores.md)
 - [Mixed-assistant workflows](mixed-assistant-workflows.md)

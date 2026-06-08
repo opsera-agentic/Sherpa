@@ -4,7 +4,9 @@
   <p align="center">
     <a href="#installation">Install</a> &middot;
     <a href="#quick-start">Quick Start</a> &middot;
-    <a href="docs/getting-started.md">Docs</a> &middot;
+    <a href="#cli-reference">CLI Reference</a> &middot;
+    <a href="#configuration">Configuration</a> &middot;
+    <a href="docs/">Docs</a> &middot;
     <a href="#contributing">Contribute</a>
   </p>
 </p>
@@ -13,39 +15,41 @@
 
 ## The Problem
 
-Every AI coding agent has its own instruction format. Cursor reads `.cursorrules`. Claude Code reads `CLAUDE.md`. Copilot reads `copilot-instructions.md`. When your team uses multiple agents — or when a developer switches tools — project context gets fragmented, duplicated, or lost entirely.
+Every AI coding agent has its own instruction format. Cursor reads `.cursorrules`. Claude Code reads `CLAUDE.md`. Copilot reads `copilot-instructions.md`. When your team uses multiple agents -- or when a developer switches tools -- project context gets fragmented, duplicated, or lost entirely.
 
 **The result:** inconsistent AI behavior across tools, repeated prompting of the same conventions, and no shared memory between sessions.
 
 ## The Solution
 
-Sherpa gives your project a single, version-controlled source of truth for AI context — conventions, architecture decisions, reusable skills, and searchable memory — then **adapts** that context into every agent's native format automatically.
+Sherpa gives your project a single, version-controlled source of truth for AI context -- conventions, architecture decisions, reusable skills, and searchable memory -- then **adapts** that context into every agent's native format automatically.
 
 ```
-Write once → sherpa adapt → every agent speaks your project's language
+Write once --> sherpa adapt --> every agent speaks your project's language
 ```
 
 ## Why Sherpa?
 
 | Value | Description |
 |-------|-------------|
-| **Write once, use everywhere** | Define conventions once in `.sherpa/`. Sherpa generates native configs for 6+ AI agents automatically. |
-| **Persistent memory** | Decisions, patterns, and context survive across sessions in a local SQLite database with hybrid search. |
+| **Write once, use everywhere** | Define conventions once in `.sherpa/`. Sherpa generates native configs for 6 AI agents automatically. |
+| **Persistent memory** | Decisions, patterns, and context survive across sessions in a local SQLite database with BM25/vector/hybrid search. |
 | **Zero lock-in** | Switch agents freely. Your context travels with you. MIT licensed, local-first, no cloud dependency. |
 | **Team consistency** | Commit `.sherpa/` to git. Every contributor gets the same AI context on `sherpa sync`. |
-| **Security built-in** | Secret scanning blocks API keys from entering memory. Data classification controls what reaches adapter files. |
-| **Skill portability** | Reusable workflow definitions (Agent Skills Standard) work across all supported agents. |
+| **Security built-in** | 9 secret-scanning rules block API keys, PEM blocks, and credentials from entering memory. Hash-chained audit trail for tamper detection. |
+| **Skill portability** | Reusable workflow definitions work across all supported agents. |
+| **MCP integration** | Live memory access for agents via Model Context Protocol server. |
+| **Telemetry** | Optional anonymous usage metrics (opt-in) for data-driven improvements. |
 
 ## Supported Agents
 
-| Agent | Output File | Status |
+| Agent | Output File | Format |
 |-------|-------------|--------|
-| Claude Code | `CLAUDE.md` | Supported |
-| Cursor | `.cursorrules` | Supported |
-| Codex CLI | `AGENTS.md` | Supported |
-| Gemini CLI | `GEMINI.md` | Supported |
-| GitHub Copilot | `.github/copilot-instructions.md` | Supported |
-| Windsurf | `.windsurfrules` | Supported |
+| Claude Code | `CLAUDE.md` | Markdown with `##` sections |
+| Cursor | `.cursorrules` | Plain text rules |
+| Codex CLI | `AGENTS.md` | Markdown with terminal guidance |
+| Gemini CLI | `GEMINI.md` | Markdown with `##` headers |
+| GitHub Copilot | `.github/copilot-instructions.md` | Markdown with HTML comments |
+| Windsurf | `.windsurfrules` | Bracket notation (`[section-name]`) |
 
 ## Installation
 
@@ -54,8 +58,6 @@ npm install -g @sherpa/cli-app
 ```
 
 **Requirements:** Node.js 22+ (LTS recommended)
-
-Verify the installation:
 
 ```bash
 sherpa --version
@@ -71,40 +73,40 @@ sherpa init
 ```
 
 This creates a `.sherpa/` directory with:
-- `sherpa.config.yaml` — Configuration for adapters, search, and security
-- `conventions.md` — Your project's coding standards (edit this!)
-- `decisions/` — Architecture decision records
-- `skills/` — Reusable workflow definitions
-- `memory.sqlite` — Local search-indexed memory store
-- `audit/` — Immutable audit trail
-
-**If your project already has agent files** (`CLAUDE.md`, `.cursorrules`, etc.), `sherpa init` automatically detects and imports their content into `conventions.md` so nothing is lost:
 
 ```
-Imported 2 existing agent file(s) into .sherpa/conventions.md — review and edit as needed.
+.sherpa/
+  sherpa.config.yaml       # Configuration
+  conventions.md           # Your project's coding standards (edit this!)
+  skills/                  # Reusable workflow definitions
+  decisions/               # Architecture decision records
+  adapters/                # Generated adapter snapshots
+  audit/                   # Immutable audit trail (JSONL)
+  memory.sqlite            # Local search-indexed memory
 ```
+
+**Auto-import:** If your project already has `CLAUDE.md`, `.cursorrules`, or other agent files, `sherpa init` detects and imports them into `conventions.md` automatically.
 
 Use a starter template for pre-configured conventions:
 
 ```bash
-sherpa init --template web-app      # React/Vue patterns, API design
-sherpa init --template library      # Semver, public API design
-sherpa init --template cli-tool     # Arg parsing, error handling
-sherpa init --template monorepo     # Workspace management
+sherpa init --template web-app      # React/Vue/Express patterns, API design, accessibility
+sherpa init --template library      # Semver, public API design, changelog discipline
+sherpa init --template cli-tool     # Arg parsing, exit codes, error handling
+sherpa init --template monorepo     # Workspace boundaries, release coordination
 ```
 
-### 2. Customize your conventions
+### 2. Edit your conventions
 
-Edit `.sherpa/conventions.md` with your project's coding standards, naming patterns, and architectural guidelines. This is the single source of truth that all adapters draw from.
+Edit `.sherpa/conventions.md` with your project's coding standards, naming patterns, and architectural guidelines. This is the single source of truth.
 
-### 3. Generate adapter files
+### 3. Generate agent files
 
 ```bash
 sherpa adapt
 ```
 
-This generates native instruction files for all configured agents:
-
+Output:
 ```
 Generated 6 adapter targets
   claude-code -> CLAUDE.md (valid)
@@ -115,236 +117,352 @@ Generated 6 adapter targets
   windsurf -> .windsurfrules (valid)
 ```
 
-### 4. Search your memory
+### 4. Sync memory and search
 
 ```bash
-sherpa search "authentication flow"
-sherpa search --type convention "naming"
-sherpa search --mode hybrid "error handling patterns"
+sherpa sync                              # Index sources into memory
+sherpa search "authentication flow"      # Search with natural language
+sherpa search --mode bm25 "error"        # Keyword-only search
 ```
 
-### 5. Sync after pulling changes
+### 5. Keep everything in sync
 
 ```bash
-sherpa sync
-```
-
-Rebuilds the memory index and regenerates adapter files from the latest `.sherpa/` content.
-
-### 6. Keep agent files in sync (reverse flow)
-
-If a teammate edits `CLAUDE.md` or `.cursorrules` directly, pull those changes back into `conventions.md`:
-
-```bash
-# Pull all agent files
+# Manual: pull agent file edits back into conventions.md
 sherpa pull
 
-# Pull a specific one
-sherpa pull --from claude-code
-```
-
-Or run the file watcher to sync automatically whenever an agent file is saved:
-
-```bash
+# Automatic: watch agent files and auto-sync on every save
 sherpa watch
 ```
 
-```
-Watching 3 agent file(s) for changes. Press Ctrl+C to stop.
-  CLAUDE.md
-  .cursorrules
-  AGENTS.md
+---
 
-[watch] CLAUDE.md changed — pulling into conventions.md...
-[watch] Re-running adapt...
-[watch] Done. conventions.md and all adapter files are up to date.
-```
+## CLI Reference
 
-## CLI Commands
+All commands support `--project-root <path>`, `--json` (machine-readable output), and `--verbose` (debug diagnostics).
+
+### Core Workflow
 
 | Command | Description |
 |---------|-------------|
-| `sherpa init` | Initialize the `.sherpa/` workspace; auto-imports any existing agent files |
-| `sherpa adapt` | Generate agent-specific instruction files from `conventions.md` |
-| `sherpa pull [--from <agent>]` | Reverse-sync agent files back into `conventions.md` |
-| `sherpa watch` | Watch agent files and auto-run pull + adapt on every save |
-| `sherpa sync` | Sync sources into memory and refresh adapter snapshots |
-| `sherpa search <query>` | Search memory with BM25/hybrid search |
-| `sherpa skills list` | List available skills |
-| `sherpa skills show <name>` | View a skill's full details |
-| `sherpa skills import <path>` | Import a skill from external source |
-| `sherpa serve` | Start the MCP server (stdio transport) |
-| `sherpa migrate --from <agent>` | Import context from existing agent configs into memory |
-| `sherpa validate` | Check conventions for consistency |
-| `sherpa status` | Show database stats and health |
-| `sherpa archive` | Archive old memory entries |
+| `sherpa init [--template TYPE] [--force]` | Initialize `.sherpa/` workspace. Auto-detects project type (web-app, library, cli-tool, monorepo) and imports existing agent files. |
+| `sherpa sync` | Index conventions, decisions, README, config files, and workflows into memory. Regenerate adapter snapshots. Compute embeddings if vector/hybrid search configured. |
+| `sherpa adapt [--agent NAME]` | Generate agent-specific instruction files. Honors `adapters.disabled` config. Use `--agent` to target a single adapter. |
+| `sherpa pull [--from AGENT]` | Reverse-sync agent files back into `conventions.md`. Skips files marked `<!-- sherpa:generated -->` to prevent duplication. |
+| `sherpa watch` | Watch agent files for changes, auto-run pull + adapt on save (debounced 300ms). Press Ctrl+C to stop. |
 
-All commands support `--json` for machine-readable output and `--verbose` for debug diagnostics.
+### Search and Memory
 
-## Architecture
+| Command | Description |
+|---------|-------------|
+| `sherpa search <query> [--mode MODE] [--type TYPES] [--tags TAGS] [--limit N]` | Search memory. Modes: `bm25` (keyword), `vector` (semantic), `hybrid` (both with rank fusion). Also matches and displays relevant skills. |
+| `sherpa status` | Show memory database entry count and file size. |
+| `sherpa archive --older-than DURATION` | Archive stale entries. Duration formats: `30d`, `12h`, `45m`, `2w`. |
 
-Sherpa is a TypeScript monorepo with clean separation between CLI, domain logic, and infrastructure:
+### Skills
 
+| Command | Description |
+|---------|-------------|
+| `sherpa skills list` | List all skills with name, version, description. |
+| `sherpa skills show --name NAME` | View a skill's full definition and instructions. |
+| `sherpa skills import --from PATH` | Import a skill folder into `.sherpa/skills/`. |
+
+### Migration and Validation
+
+| Command | Description |
+|---------|-------------|
+| `sherpa migrate --from AGENT [--dry-run]` | Import legacy agent instructions into memory. Agents: `claude-code`, `cursor`, `codex-cli`, `gemini-cli`, `copilot`, `windsurf`. |
+| `sherpa validate` | Check conventions.md integrity: missing files, duplicate imports, secret patterns, size warnings, empty decisions, missing SKILL.md files. |
+
+### MCP Server
+
+| Command | Description |
+|---------|-------------|
+| `sherpa serve [--allow-write]` | Start MCP stdio server exposing `memory_read`, `memory_write`, `memory_search` tools. Session token generated on startup for access control. |
+
+### Telemetry and Stats
+
+| Command | Description |
+|---------|-------------|
+| `sherpa telemetry enable` | Enable anonymous usage metrics (sets both operational and privacy toggles). |
+| `sherpa telemetry disable` | Disable telemetry collection. |
+| `sherpa telemetry status` | Show telemetry state, anonymous ID, and exactly what is collected. |
+| `sherpa stats` | Display local usage statistics: command breakdown, success rates, durations, active days. |
+
+---
+
+## Configuration
+
+All settings live in `.sherpa/sherpa.config.yaml`. Run `sherpa init` to generate defaults.
+
+### Adapters
+
+```yaml
+adapters:
+  disabled: []              # Agent names to skip: ["cursor", "windsurf"]
 ```
-                          ┌──────────────────────┐
-    Developer ──────────► │     sherpa CLI       │
-                          │  (Commander.js)      │
-                          └──────────┬───────────┘
-                                     │
-           ┌─────────────────────────┼─────────────────────────┐
-           ▼                         ▼                         ▼
-   ┌───────────────┐        ┌───────────────┐        ┌───────────────┐
-   │  core-config  │        │  core-memory  │        │  core-skills  │
-   │  core-adapters│        │  core-search  │        │  core-migration│
-   │               │        │  core-audit   │        │               │
-   └───────┬───────┘        └───────┬───────┘        └───────┬───────┘
-           │                        │                         │
-           └────────────────────────┼─────────────────────────┘
-                                    ▼
-                          ┌──────────────────────┐
-                          │    infra-sqlite      │
-                          │    infra-parser      │
-                          │    infra-embedding   │
-                          └──────────────────────┘
+
+### Search and Embedding
+
+```yaml
+search:
+  provider: bm25            # bm25 (keyword) | vector (semantic) | hybrid (both)
+  maxResults: 50
+
+embedding:
+  provider: tfidf           # tfidf (local, no API) | ollama (local GPU) | openai (cloud)
+  dimensions: 512
+  openai:
+    model: text-embedding-3-small
+    baseUrl: https://api.openai.com/v1
+  ollama:
+    baseUrl: http://127.0.0.1:11434
+    model: nomic-embed-text
 ```
 
-### Key Design Principles
+### Memory and Sync
 
-- **Local-first** — All data stays on your machine. No cloud, no accounts, no telemetry.
-- **Portable** — Everything lives in `.sherpa/` which you commit to version control.
-- **Pluggable** — Swap embedding providers (TF-IDF, Ollama, OpenAI) without changing application code.
-- **Auditable** — Every mutation produces a hash-chained audit record.
-- **Secure** — Secret scanning, data classification, and PII redaction built into the pipeline.
+```yaml
+memory:
+  databasePath: .sherpa/memory.sqlite
+  workspaceIsolation: true
+
+sync:
+  indexSourceFiles: false    # Set true to index JS/TS source files (up to 50 files)
+```
+
+### MCP Server
+
+```yaml
+mcp:
+  enabled: false
+  transport: stdio           # stdio | http
+  port: 8787
+```
+
+Configure your agent to connect:
+```json
+{
+  "mcpServers": {
+    "sherpa": {
+      "command": "sherpa",
+      "args": ["serve", "--allow-write"]
+    }
+  }
+}
+```
+
+### Audit Trail
+
+```yaml
+audit:
+  enabled: true
+  jsonlRotation: monthly     # monthly | daily | none
+  integrityChecksOnStartup: false
+```
+
+Audit events are hash-chained (SHA-256) and mirrored to `.sherpa/audit/YYYY-MM.jsonl`. Run `sherpa sync` with `integrityChecksOnStartup: true` to verify chain integrity.
+
+### Privacy and Security
+
+```yaml
+privacy:
+  redactSecrets: true        # Scan for secrets during sync/validate (9 detection rules)
+  allowTelemetry: false      # Privacy master switch for telemetry
+
+security:
+  requireTlsForRemoteProviders: true
+  allowedHosts: []           # Restrict remote embedding provider hosts
+```
+
+### Telemetry
+
+```yaml
+telemetry:
+  enabled: false             # Operational toggle (default: off)
+  endpoint: https://us.i.posthog.com/batch
+  apiKey: ''
+  batchSize: 25
+  flushIntervalSeconds: 300
+```
+
+Collection requires **both** `telemetry.enabled` and `privacy.allowTelemetry` to be true. See [docs/telemetry.md](docs/telemetry.md) for full transparency on what is collected.
+
+---
+
+## Skills System
+
+Skills are reusable workflow definitions stored as `SKILL.md` files with YAML frontmatter:
+
+```markdown
+---
+name: api-contract-hygiene
+description: Enforce consistent API schema, versioning, and error handling.
+version: 1.0.0
+tags: [api, backend, rest]
+triggers: [endpoint, api, route, schema]
+---
+
+## Instructions
+
+Before merging any API change:
+1. Verify OpenAPI schema is updated...
+2. Error responses use standard envelope...
+```
+
+Skills are automatically included in generated adapter files and matched against search queries by trigger keywords.
+
+---
+
+## Secret Scanning
+
+Sherpa scans content for 9 secret patterns during `sync` and `validate`:
+
+| Pattern | Example |
+|---------|---------|
+| AWS Access Key ID | `AKIA2CJXQZ5ABCD1234F` |
+| Private key blocks | `-----BEGIN PRIVATE KEY-----` |
+| Password assignments | `password=mySecret` |
+| API key assignments | `api_key=sk_live_abc` |
+| JSON secret fields | `"password": "..."` |
+| MongoDB URIs | `mongodb+srv://user:pass@host` |
+| GitHub PATs | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| Bearer tokens | `Bearer eyJhbGciOiJIUzI1NiJ9...` |
+| High-entropy hex strings | Quoted strings with 32+ hex chars |
+
+When `privacy.redactSecrets` is enabled (default), warnings are logged during `sync` and `validate`.
+
+---
 
 ## Search Capabilities
 
-Sherpa provides three search modes:
+| Mode | Algorithm | Best For | Network Required |
+|------|-----------|----------|-----------------|
+| **bm25** | SQLite FTS5 with BM25 ranking | Exact keyword matching | No |
+| **vector** | Cosine similarity on dense embeddings | Semantic/meaning-based queries | Only with OpenAI/Ollama providers |
+| **hybrid** | BM25 + Vector with Reciprocal Rank Fusion | Best overall accuracy | Only with OpenAI/Ollama providers |
 
-| Mode | How it works | Best for |
-|------|--------------|----------|
-| **BM25** | Full-text search via SQLite FTS5 | Exact keyword matching |
-| **Vector** | Cosine similarity on embeddings | Semantic/meaning-based search |
-| **Hybrid** | BM25 + Vector with Reciprocal Rank Fusion | Best overall accuracy |
+Default is `bm25` (no network, fast). Switch to `hybrid` in config and run `sherpa sync` to compute embeddings.
 
-Configure your embedding provider in `sherpa.config.yaml`:
-
-```yaml
-embedding:
-  provider: tfidf    # Local, no API needed (default)
-  # provider: ollama # Local GPU acceleration
-  # provider: openai # Cloud, highest quality
-```
+---
 
 ## MCP Integration
 
-For agents that support the Model Context Protocol, Sherpa provides a stdio server:
+Sherpa provides a Model Context Protocol server for live agent interaction:
 
 ```bash
 sherpa serve --allow-write
 ```
 
-This exposes three tools:
-- `memory_read` — Retrieve memory entries by ID
-- `memory_write` — Create new memory entries (requires `--allow-write`)
-- `memory_search` — Search memory with filters
+**Tools exposed:**
 
-Configure in your agent's MCP settings to enable live memory access during coding sessions.
+| Tool | Description | Auth |
+|------|-------------|------|
+| `memory_read` | Retrieve a memory entry by ID | Session token |
+| `memory_search` | Search memory with filters and modes | Session token |
+| `memory_write` | Create/update entries (requires `--allow-write`) | Session token + write flag |
 
-## Security
+The session token is generated on startup and returned during MCP initialization. Authentication happens before any audit logging to prevent unauthorized writes to the integrity chain.
 
-Sherpa takes security seriously:
+---
 
-- **Secret scanning** — Content is scanned for AWS keys, private key headers, password patterns before storage
-- **Data classification** — Four tiers (Public, Internal, Confidential, Restricted) control what reaches adapter files
-- **PII redaction** — Git-derived metadata (emails, names) is optionally redacted
-- **Audit trail** — Hash-chained logs of every mutation for tamper detection
+## Architecture
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting and detailed security guidance.
-
-## Documentation
-
-- [Getting Started (5 minutes)](docs/getting-started.md)
-- [Architecture Deep Dive](docs/architecture.md)
-- [Mixed-Assistant Workflows](docs/mixed-assistant-workflows.md)
-- [What Sherpa Stores](docs/what-sherpa-stores.md)
-- [Contributing Guide](docs/contributing.md)
-- [Security Policy](SECURITY.md)
-
-## Contributing
-
-We welcome contributions of all kinds — bug reports, documentation improvements, feature requests, and code contributions.
-
-### Getting Started
-
-```bash
-# Clone the repo
-git clone https://github.com/Vishnu-Opsera/Sherpa.git
-cd Sherpa
-
-# Install dependencies
-npm ci
-
-# Build all packages
-npm run build
-
-# Run tests
-npm test
-
-# Run linter
-npm run lint
+```
+                          +----------------------+
+    Developer ----------> |     sherpa CLI       |
+                          |  (Commander.js)      |
+                          +----------+-----------+
+                                     |
+           +-------------------------+-------------------------+
+           v                         v                         v
+   +---------------+        +---------------+        +---------------+
+   |  core-config  |        |  core-memory  |        |  core-skills  |
+   |  core-adapters|        |  core-search  |        |  core-migration|
+   |  core-audit   |        |  core-telemetry|       |               |
+   +-------+-------+        +-------+-------+        +-------+-------+
+           |                        |                         |
+           +------------------------+-------------------------+
+                                    v
+                          +----------------------+
+                          |    infra-sqlite      |
+                          |    infra-parser      |
+                          |    infra-embedding   |
+                          +----------------------+
 ```
 
-### Development Workflow
-
-1. **Fork** the repository and create a feature branch
-2. **Make changes** following the module structure (`cli-app` → `core-*` → `infra-*`)
-3. **Write tests** — Every new or changed source file should have corresponding tests
-4. **Run the full suite** — `npm run build && npm run lint && npm test`
-5. **Submit a PR** with a clear description of intent and any breaking changes
-
-### Module Structure
+**13 packages** with strict dependency direction: `cli-app` -> `core-*` -> `infra-*`
 
 | Package | Purpose |
 |---------|---------|
-| `packages/cli-app` | CLI entry point, Commander.js commands, templates |
-| `packages/core-config` | YAML configuration loading and validation |
-| `packages/core-memory` | Memory CRUD, secret scanning, classification |
-| `packages/core-search` | BM25, vector, and hybrid search orchestration |
-| `packages/core-skills` | Skill loading, validation, and import |
-| `packages/core-adapters` | Adapter interface, registry, and all 6 adapters |
-| `packages/core-audit` | Immutable hash-chained audit logging |
-| `packages/core-migration` | Import context from existing agent configs |
-| `packages/infra-sqlite` | SQLite with WAL, FTS5, schema migrations |
-| `packages/infra-parser` | AST-aware chunking for JS/TS files |
-| `packages/infra-embedding` | TF-IDF, Ollama, and OpenAI embedding providers |
-| `packages/mcp-server` | MCP stdio server for live agent integration |
+| `cli-app` | CLI entry point, 15 commands, 4 starter templates |
+| `core-config` | YAML config loading, schema validation, defaults |
+| `core-memory` | Memory CRUD, chunking, secret scanning |
+| `core-search` | BM25, vector, hybrid search with rank fusion |
+| `core-skills` | Skill discovery, validation, import |
+| `core-adapters` | 6 agent adapters with registry pattern |
+| `core-audit` | SHA-256 hash-chained audit logging, JSONL mirrors |
+| `core-migration` | Legacy agent file parsers and import |
+| `core-telemetry` | Anonymous usage metrics, PostHog integration |
+| `infra-sqlite` | SQLite with WAL, FTS5, migrations, repositories |
+| `infra-parser` | JS/TS regex chunker, markdown section splitter |
+| `infra-embedding` | TF-IDF, OpenAI, Ollama embedding providers |
+| `mcp-server` | MCP stdio server with JSON-RPC transport |
 
-### Code Guidelines
+---
 
-- **Keep files focused** — One responsibility per file, split at 500 lines
-- **Dependency direction** — `cli-app` → `core-*` → `infra-*` (never reverse)
-- **Test behavior, not implementation** — Mock external dependencies
-- **Comments explain why, not what** — The code speaks for itself
-- **No secrets in code** — Use environment variables, never hardcode credentials
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](docs/getting-started.md) | 5-minute setup guide |
+| [Architecture](docs/architecture.md) | Package boundaries and data flow |
+| [Configuration Reference](docs/configuration.md) | All config options with examples |
+| [Mixed-Assistant Workflows](docs/mixed-assistant-workflows.md) | Multi-agent team patterns |
+| [What Sherpa Stores](docs/what-sherpa-stores.md) | Data transparency and inspection |
+| [Telemetry](docs/telemetry.md) | What anonymous metrics are collected |
+| [Contributing](docs/contributing.md) | How to contribute |
+| [Security Policy](SECURITY.md) | Vulnerability reporting |
+
+---
+
+## Contributing
+
+We welcome contributions of all kinds.
+
+```bash
+git clone https://github.com/opsera-agentic/Sherpa.git
+cd Sherpa
+npm ci
+npm run build        # tsc -b (solution mode)
+npm test             # vitest
+npm run lint         # eslint
+```
 
 See [docs/contributing.md](docs/contributing.md) for the full guide.
 
 ## Roadmap
 
-- [x] File watching with auto-regeneration (`sherpa watch`)
-- [ ] Parser integration for source file indexing (JS/TS regex chunker built in `infra-parser`, CLI integration pending)
-- [ ] Custom adapter development SDK
+- [x] 6 agent adapters (Claude Code, Cursor, Codex CLI, Gemini CLI, Copilot, Windsurf)
+- [x] Reverse sync (`sherpa pull` / `sherpa watch`)
+- [x] BM25 + vector + hybrid search
+- [x] MCP server with memory tools
+- [x] Hash-chained audit trail
+- [x] Secret scanning (9 rules)
+- [x] Anonymous telemetry (opt-in)
+- [x] Local usage stats dashboard
+- [ ] Custom adapter SDK for community adapters
 - [ ] Skill marketplace for sharing community skills
-- [ ] VS Code extension for inline skill discovery
+- [ ] VS Code / JetBrains extension for inline skill discovery
 - [ ] Cloud sync for distributed teams (opt-in)
-- [ ] Additional language support for AST chunking (Python, Go, Rust)
+- [ ] Python, Go, Rust source file parsing
 
 ## License
 
-[MIT](LICENSE) — Use it, modify it, ship it. No strings attached.
+[MIT](LICENSE)
 
 ---
 
 <p align="center">
-  Built with care for developers who use AI coding agents daily.
+  Built for developers who use AI coding agents daily.
 </p>

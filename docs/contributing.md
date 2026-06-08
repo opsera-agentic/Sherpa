@@ -20,7 +20,7 @@ First off, thank you for considering contributing to Sherpa! Every contribution 
 
 ```bash
 # Fork and clone the repo
-git clone https://github.com/<your-username>/Sherpa.git
+git clone https://github.com/opsera-agentic/Sherpa.git
 cd Sherpa
 
 # Install all workspace dependencies
@@ -100,6 +100,7 @@ packages/
   core-adapters/    # Adapter interface + all 6 adapters
   core-audit/       # Hash-chained audit logging
   core-migration/   # Import from existing agent configs
+  core-telemetry/   # Anonymous usage metrics
   infra-sqlite/     # SQLite, FTS5, migrations
   infra-parser/     # AST-aware code chunking
   infra-embedding/  # Embedding providers (TF-IDF, Ollama, OpenAI)
