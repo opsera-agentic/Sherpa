@@ -119,11 +119,45 @@ async function _runInspect(opts: InspectCommandOptions): Promise<Record<string, 
     printReport(report, Boolean(opts.sources));
   }
 
+  return inspectTelemetryMetadata(opts, report);
+}
+
+function inspectTelemetryMetadata(opts: InspectCommandOptions, report: InspectReport): Record<string, unknown> {
+  const agents = report.agents;
+  const sourceSecretsDetected =
+    report.sources.conventions.secretsDetected || report.sources.decisions.secretsDetected || report.sources.skills.secretsDetected;
+
   return {
-    agentsInspected: report.agents.length,
-    staleAgents: report.agents.filter((agent) => agent.stale).length,
-    missingAgents: report.agents.filter((agent) => !agent.exists).length,
+    inspectScope: opts.sources ? 'sources' : opts.agent ? 'single-agent' : 'all-agents',
+    sourcesOnly: Boolean(opts.sources),
+    singleAgent: Boolean(opts.agent),
+    conventionsPresent: report.sources.conventions.exists,
+    decisionCount: report.sources.decisions.count,
+    skillCount: report.sources.skills.count,
     sourceTokens: totalSourceTokens(report.sources),
+    sourceBytes: report.sources.conventions.sizeBytes + report.sources.decisions.sizeBytes + report.sources.skills.sizeBytes,
+    sourceLines: report.sources.conventions.lineCount + report.sources.decisions.lineCount + report.sources.skills.lineCount,
+    sourceSecretsDetected,
+    agentsInspected: agents.length,
+    healthyAgents: agents.filter((agent) => agent.status === 'healthy').length,
+    missingAgents: agents.filter((agent) => !agent.exists).length,
+    staleAgents: agents.filter((agent) => agent.stale).length,
+    manualEditAgents: agents.filter((agent) => agent.manualEditsDetected).length,
+    invalidAgents: agents.filter((agent) => !agent.valid).length,
+    agentsWithWarnings: agents.filter((agent) => agent.warnings.length > 0).length,
+    agentWarningCount: agents.reduce((sum, agent) => sum + agent.warnings.length, 0),
+    agentSecretsDetected: agents.filter((agent) => agent.secretsDetected).length,
+    generatedBySherpaAgents: agents.filter((agent) => agent.generatedBySherpa).length,
+    snapshotBackedAgents: agents.filter((agent) => agent.snapshotExists).length,
+    recommendedActionAgents: agents.filter((agent) => agent.recommendedAction).length,
+    agentTokens: agents.reduce((sum, agent) => sum + agent.estimatedTokens, 0),
+    agentBytes: agents.reduce((sum, agent) => sum + agent.sizeBytes, 0),
+    agentLines: agents.reduce((sum, agent) => sum + agent.lineCount, 0),
+    sourceCoverageConventionsIncluded: agents.filter((agent) => agent.sourceCoverage.conventionsIncluded).length,
+    sourceCoverageDecisionsIncluded: agents.reduce((sum, agent) => sum + agent.sourceCoverage.decisionsIncluded, 0),
+    sourceCoverageDecisionSlots: agents.reduce((sum, agent) => sum + agent.sourceCoverage.decisionsTotal, 0),
+    sourceCoverageSkillsIncluded: agents.reduce((sum, agent) => sum + agent.sourceCoverage.skillsIncluded, 0),
+    sourceCoverageSkillSlots: agents.reduce((sum, agent) => sum + agent.sourceCoverage.skillsTotal, 0),
   };
 }
 

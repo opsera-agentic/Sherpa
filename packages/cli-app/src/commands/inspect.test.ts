@@ -4,6 +4,27 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getSherpaDir } from '@sherpa/core-config';
 
+interface TelemetryCall {
+  projectRoot: string;
+  command: string;
+  metadata: Record<string, unknown> | void;
+}
+
+const telemetryCalls = vi.hoisted((): TelemetryCall[] => []);
+
+vi.mock('../telemetry.js', () => ({
+  withTelemetry: vi.fn(
+    async (
+      projectRoot: string,
+      command: string,
+      fn: () => Promise<Record<string, unknown> | void>,
+    ): Promise<void> => {
+      const metadata = await fn();
+      telemetryCalls.push({ projectRoot, command, metadata });
+    },
+  ),
+}));
+
 import { runAdapt } from './adapt.js';
 import { runInit } from './init.js';
 import { runInspect } from './inspect.js';
@@ -55,6 +76,7 @@ describe('runInspect', () => {
     for (const root of roots.splice(0)) {
       fs.rmSync(root, { recursive: true, force: true });
     }
+    telemetryCalls.splice(0);
     vi.restoreAllMocks();
   });
 
@@ -77,6 +99,38 @@ describe('runInspect', () => {
     expect(cursor?.estimatedTokens).toBeGreaterThan(0);
     expect(cursor?.updatedAt).toBeTruthy();
     expect(cursor?.sourceCoverage.conventionsIncluded).toBe(true);
+  });
+
+  it('records anonymous aggregate metrics for inspect telemetry', async () => {
+    const root = tempProject();
+    await captureStdout(() => runInit({ projectRoot: root, force: false, template: 'cli-tool', verbose: false, json: true }));
+    await captureStdout(() => runAdapt({ projectRoot: root, verbose: false, json: true }));
+
+    await captureStdout(() => runInspect({ projectRoot: root, agent: 'cursor', verbose: false, json: true }));
+
+    const inspectCall = telemetryCalls.filter((call) => call.command === 'inspect').at(-1);
+    const metadata = inspectCall?.metadata as Record<string, unknown>;
+
+    expect(inspectCall?.projectRoot).toBe(root);
+    expect(metadata).toMatchObject({
+      inspectScope: 'single-agent',
+      sourcesOnly: false,
+      singleAgent: true,
+      conventionsPresent: true,
+      agentsInspected: 1,
+      missingAgents: 0,
+      staleAgents: 0,
+      manualEditAgents: 0,
+      sourceSecretsDetected: false,
+      generatedBySherpaAgents: 1,
+      sourceCoverageConventionsIncluded: 1,
+    });
+    expect(metadata.sourceTokens).toBeGreaterThan(0);
+    expect(metadata.skillCount).toBeGreaterThan(0);
+    expect(metadata.agentTokens).toBeGreaterThan(0);
+    expect(metadata).not.toHaveProperty('filePath');
+    expect(metadata).not.toHaveProperty('agent');
+    expect(metadata).not.toHaveProperty('skillNames');
   });
 
   it('marks generated agent files stale when conventions change after adapt', async () => {
