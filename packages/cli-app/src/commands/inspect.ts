@@ -102,8 +102,9 @@ async function _runInspect(opts: InspectCommandOptions): Promise<Record<string, 
   const logger = createLogger('inspect', opts);
   const sherpaDir = getSherpaDir(opts.projectRoot);
   if (!fs.existsSync(sherpaDir)) {
-    logger.error('inspect', 'Sherpa not initialized — run `sherpa init` first');
-    throw new Error('not initialized');
+    const message = 'Sherpa not initialized — run `sherpa init` first';
+    logger.error('inspect', message);
+    throw new Error(message);
   }
 
   const config = loadSherpaConfig(opts.projectRoot);
