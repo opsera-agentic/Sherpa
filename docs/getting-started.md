@@ -94,8 +94,29 @@ sherpa status
 
 Use **`sherpa --help`** and **`sherpa <command> --help`** for flags (`--project-root`, `--json`, `--verbose`).
 
+## 8. Validate your setup
+
+```bash
+sherpa validate
+```
+
+Checks for missing files, duplicate imports, secrets in conventions, and oversized documents.
+
+## 9. Optional: enable telemetry
+
+Help improve Sherpa by sharing anonymous usage metrics:
+
+```bash
+sherpa telemetry enable     # Opt in
+sherpa telemetry status     # See what's collected
+sherpa stats                # View your local usage dashboard
+```
+
+No file contents, paths, or personal data are ever collected. See [telemetry.md](telemetry.md) for full details.
+
 ## Next steps
 
+- Read [configuration.md](configuration.md) for all config options.
 - Read [architecture.md](architecture.md) for package boundaries.
 - Read [mixed-assistant-workflows.md](mixed-assistant-workflows.md) if multiple agents touch the same repo.
 - Read [what-sherpa-stores.md](what-sherpa-stores.md) before storing sensitive material.
