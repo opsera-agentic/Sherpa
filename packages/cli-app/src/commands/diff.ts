@@ -70,7 +70,7 @@ async function _runDiff(opts: DiffCommandOptions): Promise<Record<string, unknow
     throw new Error('Sherpa workspace not initialized. Run `sherpa init` first.');
   }
 
-  const { planned } = planAdapterOutputs(opts.projectRoot, opts.agent, (agent) => {
+  const { planned, agents, disabledAdapters } = planAdapterOutputs(opts.projectRoot, opts.agent, (agent) => {
     logger.warn(
       'diff.disabled',
       `Adapter ${agent} is disabled in config but was explicitly requested — diffing anyway`,
@@ -162,10 +162,17 @@ async function _runDiff(opts: DiffCommandOptions): Promise<Record<string, unknow
   });
 
   return {
-    sources,
-    total: results.length,
+    adaptersDiffed: results.length,
     changed: changed.length,
     unchanged: results.length - changed.length,
-    agents: results.map((r) => r.agent),
+    sourceCount: sources.length,
+    agents,
+    disabledAdapters,
+    stat: Boolean(opts.stat),
+    check: Boolean(opts.check),
+    checkFailed: Boolean(opts.check && changed.length > 0),
+    validCount: results.filter((r) => r.valid).length,
+    warningCount: results.reduce((sum, r) => sum + r.warnings.length, 0),
+    ...(opts.agent ? { agentFilter: opts.agent } : {}),
   };
 }

@@ -43,11 +43,25 @@ This replays Sherpa-managed sources into memory and refreshes derived snapshots 
 
 ## 4. Adapt for your agents
 
+After editing `.sherpa/conventions.md`, preview pending agent file changes **before** overwriting anything:
+
+```bash
+sherpa diff --stat              # summary: which files would change
+sherpa diff --agent claude-code # unified diff for one adapter
+sherpa diff --check             # CI gate — exit 1 when changes are pending
+```
+
+`sherpa diff` is read-only: it generates adapter output in memory and compares it to on-disk files. It never writes agent files.
+
+When the preview looks right, apply the changes:
+
 ```bash
 sherpa adapt
 ```
 
 Sherpa writes agent-specific files (for example `CLAUDE.md`, `.cursorrules`, `AGENTS.md`) based on your `conventions.md`. This **overwrites** the output files, so always treat `conventions.md` as the source of truth and avoid editing agent files directly.
+
+Run `sherpa diff --stat` again after `adapt` — you should see *No pending adapter changes*.
 
 ## 5. Reverse-sync agent files back into conventions.md
 

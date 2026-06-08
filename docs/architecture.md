@@ -6,7 +6,7 @@ Sherpa separates **orchestration** (CLI), **policy-rich domains** (`core-*`), an
 
 | Package | Responsibility |
 |---------|----------------|
-| `@sherpa/cli-app` | Parses argv, loads config, dispatches commands (`init`, `sync`, `adapt`, `pull`, `watch`, `search`, …). |
+| `@sherpa/cli-app` | Parses argv, loads config, dispatches commands (`init`, `sync`, `adapt`, `diff`, `pull`, `watch`, `search`, …). |
 | `@sherpa/core-config` | YAML schema, defaults, merge + validation helpers. |
 | `@sherpa/core-memory` | Memory entries, chunk rebuild hooks, secret scanning gates. |
 | `@sherpa/core-skills` | SKILL.md discovery + parsing into structured skills. |
@@ -29,6 +29,7 @@ Agent files (CLAUDE.md, .cursorrules, …)
         ▼
 .sherpa/conventions.md  ◄──── edit here (source of truth)
         │
+        │  sherpa diff (read-only preview — no writes)
         │  sherpa init (one-time import on first run)
         │  sherpa adapt (forward generate)
         │  sherpa sync  (memory + adapter snapshots)
@@ -37,6 +38,8 @@ Agent files (CLAUDE.md, .cursorrules, …)
         │
         └──► Adapter snapshots / exported instructions (CLAUDE.md, …)
 ```
+
+**Preview flow** (`conventions.md` → diff only): `sherpa diff` renders what `adapt` would write and compares it to existing agent files. Use `--stat` for a summary, `--check` for CI (exit 1 when drift is pending).
 
 **Forward flow** (`conventions.md` → agent files): `sherpa adapt` overwrites agent files from `conventions.md`.
 

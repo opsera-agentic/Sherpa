@@ -80,4 +80,32 @@ describe('createTelemetry handle lifecycle', () => {
     expect(stats.commandBreakdown[0]!.command).toBe('sync');
     verify!.close();
   });
+
+  it('withTelemetry records diff metadata without file paths', async () => {
+    root = makeProject('telemetry:\n  enabled: true\nprivacy:\n  allowTelemetry: true\n');
+
+    await withTelemetry(root, 'diff', async () => ({
+      adaptersDiffed: 3,
+      changed: 1,
+      unchanged: 2,
+      sourceCount: 2,
+      stat: true,
+      check: false,
+      checkFailed: false,
+      validCount: 3,
+      warningCount: 0,
+      agents: ['claude-code', 'cursor'],
+    }));
+
+    const verify = createTelemetry(root);
+    expect(verify).not.toBeNull();
+    const row = verify!.db
+      .prepare('SELECT command, metadata FROM telemetry_events')
+      .get() as { command: string; metadata: string };
+    expect(row.command).toBe('diff');
+    const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
+    expect(metadata).toMatchObject({ changed: 1, stat: true, sourceCount: 2 });
+    expect(metadata).not.toHaveProperty('sources');
+    verify!.close();
+  });
 });

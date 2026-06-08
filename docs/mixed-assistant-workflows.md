@@ -6,16 +6,17 @@ Modern teams rarely standardize on a single AI assistant. Sherpa is built around
 
 1. **Treat `.sherpa/conventions.md` as source**: Conventions, ADRs, and skills should be authored here — not duplicated silos per agent.
 2. **Run `sync` before context-heavy work**: Keeps memory aligned with disk after substantive edits.
-3. **`adapt` per agent switch**: Regenerate agent-local snapshots whenever skills or conventions change materially.
-4. **Avoid forked narratives**: If Cursor and Claude diverge, reconcile upstream in `.sherpa/conventions.md` or `decisions/` instead of editing generated files directly.
-5. **Use `pull` or `watch` when agents edit files directly**: If a teammate or agent edits `CLAUDE.md` or `.cursorrules` outside of Sherpa, run `sherpa pull` (or keep `sherpa watch` running) to merge those changes back into `conventions.md` before the next `adapt` overwrites them.
+3. **Preview with `diff` before `adapt`**: Run `sherpa diff --stat` after editing conventions to see pending agent file changes; use `sherpa diff --check` in CI to fail when exports are stale.
+4. **`adapt` per agent switch**: Regenerate agent-local snapshots whenever skills or conventions change materially.
+5. **Avoid forked narratives**: If Cursor and Claude diverge, reconcile upstream in `.sherpa/conventions.md` or `decisions/` instead of editing generated files directly.
+6. **Use `pull` or `watch` when agents edit files directly**: If a teammate or agent edits `CLAUDE.md` or `.cursorrules` outside of Sherpa, run `sherpa pull` (or keep `sherpa watch` running) to merge those changes back into `conventions.md` before the next `adapt` overwrites them.
 
 ## Pattern A — primary author + secondary reviewer
 
 **Scenario:** Engineers primarily use Cursor but reviewers paste snippets into Claude Code.
 
 1. Maintain authoritative markdown under `.sherpa/conventions.md` (skills + conventions).
-2. `sherpa sync && sherpa adapt` on PR branches touching agent context.
+2. `sherpa sync && sherpa diff --stat && sherpa adapt` on PR branches touching agent context.
 3. Commit `.sherpa/` changes; treat agent-specific exports as **generated artifacts** when your policy allows, or regenerate locally without committing them.
 
 ## Pattern B — sequential handoff
@@ -31,7 +32,14 @@ Modern teams rarely standardize on a single AI assistant. Sherpa is built around
 **Scenario:** CI ensures agent exports stay fresh.
 
 1. Add a job step (non-interactive) running `sherpa validate` / `sherpa sync` depending on your workflow (see CLI help).
-2. Fail builds when secrets scanners trip — Sherpa rejects credential-shaped memory bodies when scanning is enabled.
+2. Fail builds when agent files drift from Sherpa sources: `sherpa diff --check` exits 1 when `adapt` would change files.
+3. Fail builds when secrets scanners trip — Sherpa rejects credential-shaped memory bodies when scanning is enabled.
+
+Example CI step:
+
+```bash
+sherpa diff --check --stat   # non-zero exit if conventions changed but adapt not run
+```
 
 ## Pattern D — team members editing agent files directly
 
