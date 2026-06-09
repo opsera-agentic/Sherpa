@@ -150,6 +150,7 @@ All commands support `--project-root <path>`, `--json` (machine-readable output)
 | `sherpa adapt [--agent NAME]` | Generate agent-specific instruction files. Honors `adapters.disabled` config. Use `--agent` to target a single adapter. |
 | `sherpa pull [--from AGENT]` | Reverse-sync agent files back into `conventions.md`. Skips files marked `<!-- sherpa:generated -->` to prevent duplication. |
 | `sherpa watch` | Watch agent files for changes, auto-run pull + adapt on save (debounced 300ms). Press Ctrl+C to stop. |
+| `sherpa inspect [--agent <agent>] [--sources]` | Inspect `.sherpa` sources and generated agent-file health |
 
 ### Search and Memory
 
@@ -158,6 +159,19 @@ All commands support `--project-root <path>`, `--json` (machine-readable output)
 | `sherpa search <query> [--mode MODE] [--type TYPES] [--tags TAGS] [--limit N]` | Search memory. Modes: `bm25` (keyword), `vector` (semantic), `hybrid` (both with rank fusion). Also matches and displays relevant skills. |
 | `sherpa status` | Show memory database entry count and file size. |
 | `sherpa archive --older-than DURATION` | Archive stale entries. Duration formats: `30d`, `12h`, `45m`, `2w`. |
+
+### Inspect Workspace and Agent Files
+
+Use `sherpa inspect` to understand what Sherpa sources exist and whether generated AI-agent files are current, owned by Sherpa, and safe to use:
+
+```bash
+sherpa inspect
+sherpa inspect --sources
+sherpa inspect --agent claude-code
+sherpa --json inspect --agent cursor
+```
+
+The report includes source counts, token estimates, file sizes, last-updated timestamps, secret-scan status, generated-file freshness, manual edit detection, source coverage, and recommended next actions.
 
 ### Skills
 

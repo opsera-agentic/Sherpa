@@ -8,6 +8,7 @@ describe('cli-app', () => {
     expect(names).toEqual(
       expect.arrayContaining([
         'init',
+        'inspect',
         'sync',
         'search',
         'serve',
