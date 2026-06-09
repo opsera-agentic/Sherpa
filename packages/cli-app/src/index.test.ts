@@ -13,6 +13,7 @@ describe('cli-app', () => {
         'search',
         'serve',
         'adapt',
+        'diff',
         'migrate',
         'validate',
         'archive',

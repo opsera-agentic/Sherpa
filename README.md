@@ -148,6 +148,7 @@ All commands support `--project-root <path>`, `--json` (machine-readable output)
 | `sherpa init [--template TYPE] [--force]` | Initialize `.sherpa/` workspace. Auto-detects project type (web-app, library, cli-tool, monorepo) and imports existing agent files. |
 | `sherpa sync` | Index conventions, decisions, README, config files, and workflows into memory. Regenerate adapter snapshots. Compute embeddings if vector/hybrid search configured. |
 | `sherpa adapt [--agent NAME]` | Generate agent-specific instruction files. Honors `adapters.disabled` config. Use `--agent` to target a single adapter. |
+| `sherpa diff [--stat] [--check] [--agent NAME]` | Preview pending agent file changes before running `adapt`. Use `--check` for CI (exit 1 when changes pending). |
 | `sherpa pull [--from AGENT]` | Reverse-sync agent files back into `conventions.md`. Skips files marked `<!-- sherpa:generated -->` to prevent duplication. |
 | `sherpa watch` | Watch agent files for changes, auto-run pull + adapt on save (debounced 300ms). Press Ctrl+C to stop. |
 | `sherpa inspect [--agent <agent>] [--sources]` | Inspect `.sherpa` sources and generated agent-file health |

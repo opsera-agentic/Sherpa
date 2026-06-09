@@ -13,6 +13,7 @@ function safeRealpath(p: string): string {
 import { Command, CommanderError, Option } from 'commander';
 
 import { runAdapt } from './commands/adapt.js';
+import { runDiff } from './commands/diff.js';
 import { runArchive } from './commands/archive.js';
 import { runInit } from './commands/init.js';
 import { runInspect } from './commands/inspect.js';
@@ -126,6 +127,24 @@ export function createSherpaProgram(): Command {
       const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
       await runAdapt({
         agent: opts.agent,
+        projectRoot: resolveRoot(g),
+        verbose: Boolean(g.verbose),
+        json: Boolean(g.json),
+      });
+    });
+
+  program
+    .command('diff')
+    .description('Preview agent file changes before running sherpa adapt')
+    .option('--agent <name>', 'Target a single adapter')
+    .option('--stat', 'Show summary only, omit unified diffs')
+    .option('--check', 'Exit with code 1 when pending changes exist (for CI)')
+    .action(async (opts, cmd) => {
+      const g = cmd.optsWithGlobals() as { verbose?: boolean; json?: boolean; projectRoot?: string };
+      await runDiff({
+        agent: opts.agent,
+        stat: Boolean(opts.stat),
+        check: Boolean(opts.check),
         projectRoot: resolveRoot(g),
         verbose: Boolean(g.verbose),
         json: Boolean(g.json),

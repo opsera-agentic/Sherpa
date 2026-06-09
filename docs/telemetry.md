@@ -24,7 +24,7 @@ When telemetry is enabled, each CLI command invocation records:
 
 | Field | Example | Purpose |
 |-------|---------|---------|
-| Command name | `sync`, `adapt`, `search` | Know which features are used |
+| Command name | `sync`, `adapt`, `diff`, `search` | Know which features are used |
 | Success/failure | `true` / `false` | Identify reliability issues |
 | Duration (ms) | `342` | Find performance bottlenecks |
 | CLI version | `0.1.0` | Track adoption of new versions |
@@ -32,7 +32,7 @@ When telemetry is enabled, each CLI command invocation records:
 | OS platform | `darwin`, `linux`, `win32` | Platform-specific priorities |
 | OS architecture | `x64`, `arm64` | Build/binary targeting |
 | Anonymous machine ID | `a1b2c3d4e5f67890` | Distinguish unique installations |
-| Command metadata | `{ adaptersGenerated: 6 }` | Feature usage depth |
+| Command metadata | `{ adaptersGenerated: 6 }`, `{ changed: 2, check: true }` | Feature usage depth (counts and flags only — never paths) |
 
 ## What We NEVER Collect
 
