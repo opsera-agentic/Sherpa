@@ -1,5 +1,15 @@
 # Security policy
 
+## Supported versions
+
+Sherpa is pre-1.0 and under active development. Security fixes are applied to the
+latest released minor version. We recommend always running the most recent release.
+
+| Version | Supported          |
+|---------|--------------------|
+| 0.1.x   | :white_check_mark: |
+| < 0.1   | :x:                |
+
 ## Reporting vulnerabilities
 
 Please report suspected vulnerabilities privately so we can fix issues before wider disclosure.
