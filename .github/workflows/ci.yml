@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run build
@@ -52,23 +52,38 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run lint
 
   test:
-    name: Test
+    name: Test (${{ matrix.os }})
     needs: guard
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - name: Install (capture native module build log)
+        shell: bash
+        run: npm ci --foreground-scripts 2>&1 | tee install.log
+      - name: Verify better-sqlite3 native module
+        shell: bash
+        run: |
+          if grep -q 'gyp info' install.log; then
+            echo '::warning::better-sqlite3 was compiled from source (node-gyp fallback) — no prebuilt binary matched this platform/Node version.'
+          else
+            echo 'better-sqlite3 installed from prebuilt binary (no node-gyp fallback)'
+          fi
+          node -e "const db = new (require('better-sqlite3'))(':memory:'); db.exec('CREATE TABLE t (x)'); db.close(); console.log('better-sqlite3 native module loads and works')"
       - run: npm run test
 
   semgrep:
@@ -105,7 +120,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run build

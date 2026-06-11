@@ -8,7 +8,30 @@ Sherpa gives AI coding agents a **portable project brain**: conventions, skills,
 npm install -g @sherpa/cli-app
 ```
 
-Verify Node 22+ (`node -v`).
+Verify Node 22+ (`node -v`). If the repo ships an `.nvmrc`, `nvm use` (or `fnm use`) switches automatically.
+
+### Troubleshooting installation
+
+Sherpa depends on [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3), a **native module**. On install, npm downloads a prebuilt binary matching your OS, CPU, and Node version; if none matches, it compiles from source, which needs a C++ toolchain.
+
+**`ERR_DLOPEN_FAILED` / "compiled against a different Node.js version" (`NODE_MODULE_VERSION` mismatch)**
+You installed under one Node version and are running under another (common after `nvm use`). Rebuild for the current version:
+
+```bash
+npm rebuild better-sqlite3
+# or, from a clean slate:
+rm -rf node_modules && npm install
+```
+
+**Install fails compiling from source (`gyp ERR!`)**
+A C++ toolchain is missing or broken:
+
+- **macOS** — install the Xcode Command Line Tools: `xcode-select --install`. If it says tools are already installed but builds still fail (stale receipt after a macOS upgrade), reinstall them: `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install`.
+- **Linux (Debian/Ubuntu)** — `sudo apt-get install -y build-essential python3`.
+- **Windows** — install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload.
+
+**`npm install` fails with an engine error**
+Sherpa requires **Node 22 or newer** (`engine-strict` is enabled, so older versions fail fast instead of producing a broken native build). Upgrade with your version manager, e.g. `nvm install 22 && nvm use 22`.
 
 ## 2. Initialize a repository
 

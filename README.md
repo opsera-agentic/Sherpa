@@ -63,6 +63,8 @@ npm install -g @sherpa/cli-app
 sherpa --version
 ```
 
+> Sherpa uses a native SQLite module. If installation fails or you hit `ERR_DLOPEN_FAILED` after switching Node versions, see [Troubleshooting installation](docs/getting-started.md#troubleshooting-installation).
+
 ## Quick Start
 
 ### 1. Initialize your project
