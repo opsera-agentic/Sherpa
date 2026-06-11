@@ -16,9 +16,11 @@
     "build": "tsc -b"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@sherpa/core-audit": "0.1.0",
     "@sherpa/core-config": "0.1.0",
     "@sherpa/core-memory": "0.1.0",
-    "@sherpa/core-search": "0.1.0"
+    "@sherpa/core-search": "0.1.0",
+    "zod": "^4.4.3"
   }
 }
