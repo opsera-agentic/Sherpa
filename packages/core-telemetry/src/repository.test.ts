@@ -24,8 +24,12 @@ try {
 }
 
 let tmpDir: string | undefined;
+let openDb: { close(): void } | undefined;
 
 afterEach(() => {
+  // Close the DB before deleting tmpDir — Windows cannot unlink open files (EBUSY)
+  openDb?.close();
+  openDb = undefined;
   if (tmpDir && fs.existsSync(tmpDir)) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -36,7 +40,9 @@ describe.skipIf(!hasSqlite)('TelemetryRepository (SQLite)', () => {
   async function createTestDb() {
     const { initDatabase } = await import('@sherpa/infra-sqlite');
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-telemetry-'));
-    return initDatabase(path.join(tmpDir, 'test.sqlite'));
+    const db = initDatabase(path.join(tmpDir, 'test.sqlite'));
+    openDb = db;
+    return db;
   }
 
   it('inserts and retrieves unflushed events', async () => {
