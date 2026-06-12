@@ -77,7 +77,7 @@ describe('getSystemInfo', () => {
   it('returns a valid IANA timezone', () => {
     const info = getSystemInfo('0.1.0');
     // IANA timezones contain a slash (e.g. "America/New_York") or are "UTC"
-    expect(info.timezone).toMatch(/\// || info.timezone === 'UTC');
+    expect(info.timezone).toMatch(/\/|^UTC$/);
   });
 
   it('does not contain PII', () => {
