@@ -7,8 +7,12 @@ import { MigrationService } from './index.js';
 import { parseCursorRules } from './parsers.js';
 
 let tmp: string | undefined;
+let memory: MemoryRepository | undefined;
 
 afterEach(() => {
+  // Close the DB before deleting tmp — Windows cannot unlink open files (EBUSY)
+  memory?.close();
+  memory = undefined;
   if (tmp && fs.existsSync(tmp)) {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -24,7 +28,7 @@ describe('core-migration', () => {
       'utf8',
     );
     const dbPath = path.join(tmp, '.sherpa', 'memory.sqlite');
-    const memory = new MemoryRepository(dbPath);
+    memory = new MemoryRepository(dbPath);
     const svc = new MigrationService(memory);
     const report = svc.migrate({ projectRoot: tmp, from: 'claude-code' });
     expect(report.errors).toHaveLength(0);
@@ -37,7 +41,7 @@ describe('core-migration', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-migrate-dry-'));
     fs.writeFileSync(path.join(tmp, '.cursorrules'), 'Block one\n\nBlock two', 'utf8');
     const dbPath = path.join(tmp, '.sherpa', 'memory.sqlite');
-    const memory = new MemoryRepository(dbPath);
+    memory = new MemoryRepository(dbPath);
     const svc = new MigrationService(memory);
     const report = svc.migrate({ projectRoot: tmp, from: 'cursor', dryRun: true });
     expect(report.entriesCreated).toBeGreaterThan(0);
@@ -59,7 +63,7 @@ describe('core-migration', () => {
   it('records errors when source file missing', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sherpa-migrate-missing-'));
     const dbPath = path.join(tmp, '.sherpa', 'memory.sqlite');
-    const memory = new MemoryRepository(dbPath);
+    memory = new MemoryRepository(dbPath);
     const svc = new MigrationService(memory);
     const report = svc.migrate({ projectRoot: tmp, from: 'gemini-cli' });
     expect(report.entriesCreated).toBe(0);
