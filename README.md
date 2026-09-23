@@ -446,8 +446,8 @@ The session token is generated on startup and returned during MCP initialization
 We welcome contributions of all kinds.
 
 ```bash
-git clone https://github.com/opsera-agentic/Sherpa.git
-cd Sherpa
+git clone https://github.com/opsera-public/sherpa.git
+cd sherpa
 npm ci
 npm run build        # tsc -b (solution mode)
 npm test             # vitest

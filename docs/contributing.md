@@ -20,8 +20,8 @@ First off, thank you for considering contributing to Sherpa! Every contribution 
 
 ```bash
 # Fork and clone the repo
-git clone https://github.com/opsera-agentic/Sherpa.git
-cd Sherpa
+git clone https://github.com/opsera-public/sherpa.git
+cd sherpa
 
 # Install all workspace dependencies
 npm ci

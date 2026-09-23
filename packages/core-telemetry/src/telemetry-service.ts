@@ -232,7 +232,7 @@ export function showFirstRunTelemetryNotice(projectRoot: string): void {
     '\n' +
     '  To opt in:   sherpa telemetry enable\n' +
     '  To see what would be collected: sherpa telemetry status\n' +
-    '  Learn more:  https://github.com/anthropics/sherpa/blob/main/docs/telemetry.md\n' +
+    '  Learn more:  https://github.com/opsera-public/sherpa/blob/main/docs/telemetry.md\n' +
     '\n',
   );
 
