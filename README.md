@@ -474,7 +474,7 @@ See [docs/contributing.md](docs/contributing.md) for the full guide.
 
 ## License
 
-[MIT](LICENSE)
+MIT © Opsera, Inc. See [LICENSE](LICENSE) for the full terms.
 
 ---
 
